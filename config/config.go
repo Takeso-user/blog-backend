@@ -1,1 +1,69 @@
 package config
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"os"
+	"time"
+
+	"github.com/joho/godotenv"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+)
+
+type Config struct {
+	MongoClient *mongo.Client
+	Database    *mongo.Database
+}
+
+// LoadEnv загружает переменные окружения из .env
+func LoadEnv() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Error loading .env file: %v", err)
+	}
+}
+
+// ConnectToMongo создает подключение к MongoDB
+func ConnectToMongo() (*Config, error) {
+	uri := os.Getenv("MONGO_URI")
+	dbName := os.Getenv("MONGO_DATABASE")
+
+	if uri == "" || dbName == "" {
+		return nil, fmt.Errorf("MONGO_URI or MONGO_DATABASE is not set in the environment")
+	}
+
+	// Настройки клиента MongoDB
+	clientOptions := options.Client().ApplyURI(uri).SetConnectTimeout(10 * time.Second)
+
+	client, err := mongo.Connect(context.TODO(), clientOptions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to MongoDB: %w", err)
+	}
+
+	// Проверка подключения
+	err = client.Ping(context.TODO(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to ping MongoDB: %w", err)
+	}
+
+	log.Println("Connected to MongoDB")
+
+	// Инициализация базы данных
+	database := client.Database(dbName)
+
+	return &Config{
+		MongoClient: client,
+		Database:    database,
+	}, nil
+}
+
+// CloseMongo закрывает соединение с MongoDB
+func (c *Config) CloseMongo() {
+	if err := c.MongoClient.Disconnect(context.TODO()); err != nil {
+		log.Printf("Error disconnecting from MongoDB: %v", err)
+	} else {
+		log.Println("Disconnected from MongoDB")
+	}
+}
