@@ -12,9 +12,11 @@ import (
 type PostRepository struct {
 	collection *mongo.Collection
 }
+
 type UserRepository struct {
 	collection *mongo.Collection
 }
+
 type CommentRepository struct {
 	collection *mongo.Collection
 }
@@ -45,6 +47,25 @@ func (r *UserRepository) GetUserByID(userID string) (User, error) {
 	return user, err
 }
 
+func (r *UserRepository) GetUsers() ([]User, error) {
+	cursor, err := r.collection.Find(context.TODO(), bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	defer func(cursor *mongo.Cursor, ctx context.Context) {
+		err := cursor.Close(ctx)
+		if err != nil {
+			log.Printf("error closing cursor: %v", err)
+		}
+	}(cursor, context.TODO())
+
+	var users []User
+	if err = cursor.All(context.TODO(), &users); err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
 func NewPostRepository(collection *mongo.Collection) *PostRepository {
 	return &PostRepository{collection: collection}
 }
@@ -71,6 +92,36 @@ func (r *PostRepository) GetPosts() ([]Post, error) {
 		return nil, err
 	}
 	return posts, nil
+}
+
+func (r *PostRepository) GetPostById(id string) (Post, error) {
+	var post Post
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return post, err
+	}
+	err = r.collection.FindOne(context.TODO(), bson.M{"_id": objectID}).Decode(&post)
+	return post, err
+}
+
+func (r *PostRepository) DeletePost(id string) error {
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return err
+	}
+	_, err = r.collection.DeleteOne(context.TODO(), bson.M{"_id": objectID})
+	return err
+}
+
+func (r *PostRepository) UpdatePost(id primitive.ObjectID, updateFields bson.M) (Post, error) {
+	var updatedPost Post
+	err := r.collection.FindOneAndUpdate(
+		context.TODO(),
+		bson.M{"_id": id},
+		bson.M{"$set": updateFields},
+		options.FindOneAndUpdate().SetReturnDocument(options.After),
+	).Decode(&updatedPost)
+	return updatedPost, err
 }
 
 func NewCommentRepository(collection *mongo.Collection) *CommentRepository {
@@ -102,4 +153,43 @@ func (r *CommentRepository) GetComments(postID string) ([]Comment, error) {
 		return nil, err
 	}
 	return comments, nil
+}
+
+func (r *CommentRepository) GetAllComment() ([]Comment, error) {
+	cursor, err := r.collection.Find(context.TODO(), bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	defer func(cursor *mongo.Cursor, ctx context.Context) {
+		err := cursor.Close(ctx)
+		if err != nil {
+			log.Printf("error closing cursor: %v", err)
+		}
+	}(cursor, context.TODO())
+
+	var comments []Comment
+	if err = cursor.All(context.TODO(), &comments); err != nil {
+		return nil, err
+	}
+	return comments, nil
+}
+
+func (r *CommentRepository) DeleteComment(id string) error {
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return err
+	}
+	_, err = r.collection.DeleteOne(context.TODO(), bson.M{"_id": objectID})
+	return err
+}
+
+func (r *CommentRepository) UpdateComment(ctx context.Context, filter, update bson.M) (Comment, error) {
+	var updatedComment Comment
+	err := r.collection.FindOneAndUpdate(
+		ctx,
+		filter,
+		update,
+		options.FindOneAndUpdate().SetReturnDocument(options.After),
+	).Decode(&updatedComment)
+	return updatedComment, err
 }

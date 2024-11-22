@@ -3,6 +3,7 @@ package pkg
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"log"
 	"net/http"
 )
@@ -27,8 +28,6 @@ func (h *Handler) Register(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	// Хэшируем пароль
 	hashedPassword, err := HashPassword(input.Password)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
@@ -39,7 +38,6 @@ func (h *Handler) Register(c *gin.Context) {
 		input.Role = "user"
 	}
 
-	// Сохраняем пользователя в базе
 	if err := h.userService.CreateUser(input); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register user"})
 		return
@@ -64,7 +62,6 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	// Проверяем пароль
 	err = CheckPassword(user.Password, input.Password)
 	fmt.Printf("user.Password %s", user.Password)
 	fmt.Printf("input.Password %s", input.Password)
@@ -134,7 +131,7 @@ func (h *Handler) AddComment(c *gin.Context) {
 
 func (h *Handler) GetComments(c *gin.Context) {
 	postID := c.Param("id")
-
+	fmt.Printf("postID %s", postID)
 	comments, err := h.commentService.GetComments(postID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to fetch comments"})
@@ -142,4 +139,107 @@ func (h *Handler) GetComments(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, comments)
+}
+
+func (h *Handler) GetUsers(context *gin.Context) {
+	users, err := h.userService.GetUsers()
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to fetch users"})
+		return
+	}
+
+	context.JSON(http.StatusOK, users)
+}
+
+func (h *Handler) GetPostById(context *gin.Context) {
+	postID := context.Param("id")
+	post, err := h.postService.GetPostById(postID)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to fetch post"})
+		return
+	}
+	context.JSON(http.StatusOK, post)
+
+}
+
+func (h *Handler) DeletePost(context *gin.Context) {
+	postID := context.Param("id")
+	err := h.postService.DeletePost(postID)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to delete post"})
+		return
+	}
+	context.JSON(http.StatusOK, gin.H{"message": "Post deleted successfully"})
+
+}
+
+func (h *Handler) GetAllComment(context *gin.Context) {
+	comments, err := h.commentService.GetAllComment()
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to fetch comments"})
+		return
+	}
+	context.JSON(http.StatusOK, comments)
+
+}
+
+func (h *Handler) DeleteComment(context *gin.Context) {
+	commentID := context.Param("commentID")
+	err := h.commentService.DeleteComment(commentID)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to delete comment"})
+		return
+	}
+	context.JSON(http.StatusOK, gin.H{"message": "Comment deleted successfully"})
+}
+
+func (h *Handler) UpdatePost(context *gin.Context) {
+	postID := context.Param("id")
+
+	var input Post
+	if err := context.ShouldBindJSON(&input); err != nil {
+		context.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	objectID, err := primitive.ObjectIDFromHex(postID)
+	if err != nil {
+		context.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
+		return
+	}
+
+	post, err := h.postService.UpdatePost(objectID, input)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Unable to update post",
+			"err":   err.Error(),
+		})
+		return
+	}
+	context.JSON(http.StatusOK, gin.H{"message": "Post updated successfully", "post": post})
+}
+
+func (h *Handler) UpdateComment(context *gin.Context) {
+	commentID := context.Param("commentID")
+
+	var input Comment
+	if err := context.ShouldBindJSON(&input); err != nil {
+		context.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	objectID, err := primitive.ObjectIDFromHex(commentID)
+	if err != nil {
+		context.JSON(http.StatusBadRequest, gin.H{"error": "Invalid comment ID"})
+		return
+	}
+
+	comment, err := h.commentService.UpdateComment(objectID, input)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Unable to update comment",
+			"err":   err.Error(),
+		})
+		return
+	}
+	context.JSON(http.StatusOK, gin.H{"message": "Comment updated successfully", "comment": comment})
+
 }

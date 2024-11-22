@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -12,12 +13,17 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+var (
+	once   sync.Once
+	uri    string
+	dbName string
+)
+
 type Config struct {
 	MongoClient *mongo.Client
 	Database    *mongo.Database
 }
 
-// LoadEnv загружает переменные окружения из .env
 func LoadEnv() {
 	err := godotenv.Load()
 	if err != nil {
@@ -25,16 +31,17 @@ func LoadEnv() {
 	}
 }
 
-// ConnectToMongo создает подключение к MongoDB
 func ConnectToMongo() (*Config, error) {
-	uri := os.Getenv("MONGO_URI")
-	dbName := os.Getenv("MONGO_DATABASE")
+	once.Do(
+		func() {
+			uri = os.Getenv("MONGO_URI")
+			dbName = os.Getenv("MONGO_DATABASE")
+		})
 
 	if uri == "" || dbName == "" {
 		return nil, fmt.Errorf("MONGO_URI or MONGO_DATABASE is not set in the environment")
 	}
 
-	// Настройки клиента MongoDB
 	clientOptions := options.Client().ApplyURI(uri).SetConnectTimeout(10 * time.Second)
 
 	client, err := mongo.Connect(context.TODO(), clientOptions)
@@ -42,7 +49,6 @@ func ConnectToMongo() (*Config, error) {
 		return nil, fmt.Errorf("failed to connect to MongoDB: %w", err)
 	}
 
-	// Проверка подключения
 	err = client.Ping(context.TODO(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to ping MongoDB: %w", err)
@@ -50,7 +56,6 @@ func ConnectToMongo() (*Config, error) {
 
 	log.Println("Connected to MongoDB")
 
-	// Инициализация базы данных
 	database := client.Database(dbName)
 
 	return &Config{
@@ -59,7 +64,6 @@ func ConnectToMongo() (*Config, error) {
 	}, nil
 }
 
-// CloseMongo закрывает соединение с MongoDB
 func (c *Config) CloseMongo() {
 	if err := c.MongoClient.Disconnect(context.TODO()); err != nil {
 		log.Printf("Error disconnecting from MongoDB: %v", err)

@@ -3,15 +3,26 @@ package pkg
 import (
 	"errors"
 	"github.com/dgrijalva/jwt-go"
+	"os"
+	"sync"
 
 	"golang.org/x/crypto/bcrypt"
 
 	"time"
 )
 
-var jwtSecret = []byte("your_jwt_secret")
+var (
+	jwtSecret []byte
+	once      sync.Once
+)
 
-// Claims структура для JWT
+func getJWTSecret() []byte {
+	once.Do(func() {
+		jwtSecret = []byte(os.Getenv("JWT_SECRET"))
+	})
+	return jwtSecret
+}
+
 type Claims struct {
 	Username string `json:"username"`
 	Role     string `json:"role"`
@@ -19,18 +30,15 @@ type Claims struct {
 	jwt.StandardClaims
 }
 
-// HashPassword хэширует пароль
 func HashPassword(password string) (string, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	return string(hashedPassword), err
 }
 
-// CheckPassword сравнивает пароль и его хэш
 func CheckPassword(hashedPassword, password string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 }
 
-// GenerateJWT создает токен
 func GenerateJWT(user User) (string, error) {
 
 	claims := &Claims{
@@ -44,13 +52,14 @@ func GenerateJWT(user User) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtSecret)
+	return token.SignedString(getJWTSecret())
 }
 
 func ParseJWT(tokenStr string) (*Claims, error) {
+
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
-		return jwtSecret, nil
+		return getJWTSecret(), nil
 	})
 	if err != nil || !token.Valid {
 		return nil, errors.New("invalid token")
