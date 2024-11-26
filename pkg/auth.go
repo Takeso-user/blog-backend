@@ -15,7 +15,7 @@ var (
 	once      sync.Once
 )
 
-func getJWTSecret() []byte {
+func GetJWTSecret() []byte {
 	once.Do(func() {
 		jwtSecret = []byte(os.Getenv("JWT_SECRET"))
 		log.Println("JWT secret loaded from environment")
@@ -60,7 +60,7 @@ func GenerateJWT(user User) (string, error) {
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signedToken, err := token.SignedString(getJWTSecret())
+	signedToken, err := token.SignedString(GetJWTSecret())
 	if err != nil {
 		log.Printf("Error generating JWT: %v", err)
 	}
@@ -71,7 +71,7 @@ func ParseJWT(tokenStr string) (*Claims, error) {
 	log.Println("Parsing JWT")
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
-		return getJWTSecret(), nil
+		return GetJWTSecret(), nil
 	})
 	if err != nil || !token.Valid {
 		log.Printf("Invalid token: %v", err)

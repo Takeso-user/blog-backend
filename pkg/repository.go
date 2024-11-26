@@ -10,24 +10,24 @@ import (
 )
 
 type PostRepository struct {
-	collection *mongo.Collection
+	Collection *mongo.Collection
 }
 
 type UserRepository struct {
-	collection *mongo.Collection
+	Collection *mongo.Collection
 }
 
 type CommentRepository struct {
-	collection *mongo.Collection
+	Collection *mongo.Collection
 }
 
 func NewUserRepository(collection *mongo.Collection) *UserRepository {
-	return &UserRepository{collection: collection}
+	return &UserRepository{Collection: collection}
 }
 
 func (r *UserRepository) CreateUser(user User) error {
 	log.Println("Creating user:", user.Username)
-	_, err := r.collection.InsertOne(context.TODO(), user)
+	_, err := r.Collection.InsertOne(context.TODO(), user)
 	if err != nil {
 		log.Printf("Error creating user: %v", err)
 	}
@@ -37,7 +37,7 @@ func (r *UserRepository) CreateUser(user User) error {
 func (r *UserRepository) GetUserByUsername(username string) (User, error) {
 	log.Println("Getting user by username:", username)
 	var user User
-	err := r.collection.FindOne(context.TODO(), bson.M{"username": username}).Decode(&user)
+	err := r.Collection.FindOne(context.TODO(), bson.M{"username": username}).Decode(&user)
 	if err != nil {
 		log.Printf("Error getting user by username: %v", err)
 	} else {
@@ -54,7 +54,7 @@ func (r *UserRepository) GetUserByID(userID string) (User, error) {
 		log.Printf("Error converting userID to ObjectID: %v", err)
 		return user, err
 	}
-	err = r.collection.FindOne(context.TODO(), bson.M{"_id": objectID}).Decode(&user)
+	err = r.Collection.FindOne(context.TODO(), bson.M{"_id": objectID}).Decode(&user)
 	if err != nil {
 		log.Printf("Error getting user by ID: %v", err)
 	}
@@ -63,7 +63,7 @@ func (r *UserRepository) GetUserByID(userID string) (User, error) {
 
 func (r *UserRepository) GetUsers() ([]User, error) {
 	log.Println("Getting all users")
-	cursor, err := r.collection.Find(context.TODO(), bson.M{})
+	cursor, err := r.Collection.Find(context.TODO(), bson.M{})
 	if err != nil {
 		log.Printf("Error getting users: %v", err)
 		return nil, err
@@ -84,12 +84,12 @@ func (r *UserRepository) GetUsers() ([]User, error) {
 }
 
 func NewPostRepository(collection *mongo.Collection) *PostRepository {
-	return &PostRepository{collection: collection}
+	return &PostRepository{Collection: collection}
 }
 
 func (r *PostRepository) CreatePost(post Post) error {
 	log.Println("Creating post:", post.Title)
-	_, err := r.collection.InsertOne(context.TODO(), post)
+	_, err := r.Collection.InsertOne(context.TODO(), post)
 	if err != nil {
 		log.Printf("Error creating post: %v", err)
 	}
@@ -98,7 +98,7 @@ func (r *PostRepository) CreatePost(post Post) error {
 
 func (r *PostRepository) GetPosts() ([]Post, error) {
 	log.Println("Getting all posts")
-	cursor, err := r.collection.Find(context.TODO(), bson.M{})
+	cursor, err := r.Collection.Find(context.TODO(), bson.M{})
 	if err != nil {
 		log.Printf("Error getting posts: %v", err)
 		return nil, err
@@ -126,7 +126,7 @@ func (r *PostRepository) GetPostByID(id string) (Post, error) {
 		log.Printf("Error converting postID to ObjectID: %v", err)
 		return post, err
 	}
-	err = r.collection.FindOne(context.TODO(), bson.M{"_id": objectID}).Decode(&post)
+	err = r.Collection.FindOne(context.TODO(), bson.M{"_id": objectID}).Decode(&post)
 	if err != nil {
 		log.Printf("Error getting post by ID: %v", err)
 	}
@@ -140,7 +140,7 @@ func (r *PostRepository) DeletePost(id string) error {
 		log.Printf("Error converting postID to ObjectID: %v", err)
 		return err
 	}
-	_, err = r.collection.DeleteOne(context.TODO(), bson.M{"_id": objectID})
+	_, err = r.Collection.DeleteOne(context.TODO(), bson.M{"_id": objectID})
 	if err != nil {
 		log.Printf("Error deleting post: %v", err)
 	}
@@ -150,7 +150,7 @@ func (r *PostRepository) DeletePost(id string) error {
 func (r *PostRepository) UpdatePost(id primitive.ObjectID, updateFields bson.M) (Post, error) {
 	log.Println("Updating post by ID:", id.Hex())
 	var updatedPost Post
-	err := r.collection.FindOneAndUpdate(
+	err := r.Collection.FindOneAndUpdate(
 		context.TODO(),
 		bson.M{"_id": id},
 		bson.M{"$set": updateFields},
@@ -163,12 +163,12 @@ func (r *PostRepository) UpdatePost(id primitive.ObjectID, updateFields bson.M) 
 }
 
 func NewCommentRepository(collection *mongo.Collection) *CommentRepository {
-	return &CommentRepository{collection: collection}
+	return &CommentRepository{Collection: collection}
 }
 
 func (r *CommentRepository) AddComment(comment Comment) error {
 	log.Println("Adding comment to post:", comment.PostID)
-	_, err := r.collection.InsertOne(context.TODO(), comment)
+	_, err := r.Collection.InsertOne(context.TODO(), comment)
 	if err != nil {
 		log.Printf("Error adding comment: %v", err)
 	}
@@ -180,7 +180,7 @@ func (r *CommentRepository) GetComments(postID string) ([]Comment, error) {
 	filter := bson.M{"post_id": postID}
 	opts := options.Find().SetSort(bson.M{"created_at": 1})
 
-	cursor, err := r.collection.Find(context.TODO(), filter, opts)
+	cursor, err := r.Collection.Find(context.TODO(), filter, opts)
 	if err != nil {
 		log.Printf("Error getting comments: %v", err)
 		return nil, err
@@ -200,9 +200,9 @@ func (r *CommentRepository) GetComments(postID string) ([]Comment, error) {
 	return comments, nil
 }
 
-func (r *CommentRepository) GetAllComments() ([]Comment, error) {
+func (r *CommentRepository) GetAllComment() ([]Comment, error) {
 	log.Println("Getting all comments")
-	cursor, err := r.collection.Find(context.TODO(), bson.M{})
+	cursor, err := r.Collection.Find(context.TODO(), bson.M{})
 	if err != nil {
 		log.Printf("Error getting comments: %v", err)
 		return nil, err
@@ -229,7 +229,7 @@ func (r *CommentRepository) DeleteComment(id string) error {
 		log.Printf("Error converting commentID to ObjectID: %v", err)
 		return err
 	}
-	_, err = r.collection.DeleteOne(context.TODO(), bson.M{"_id": objectID})
+	_, err = r.Collection.DeleteOne(context.TODO(), bson.M{"_id": objectID})
 	if err != nil {
 		log.Printf("Error deleting comment: %v", err)
 	}
@@ -239,7 +239,7 @@ func (r *CommentRepository) DeleteComment(id string) error {
 func (r *CommentRepository) UpdateComment(ctx context.Context, filter, update bson.M) (Comment, error) {
 	log.Println("Updating comment with filter:", filter)
 	var updatedComment Comment
-	err := r.collection.FindOneAndUpdate(
+	err := r.Collection.FindOneAndUpdate(
 		ctx,
 		filter,
 		update,

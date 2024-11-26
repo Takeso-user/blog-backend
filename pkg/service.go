@@ -9,23 +9,23 @@ import (
 )
 
 type PostService struct {
-	repository PostRepositoryInterface
+	Repository PostRepositoryInterface
 }
 type UserService struct {
-	repository UserRepositoryInterface
+	Repository UserRepositoryInterface
 }
 type CommentService struct {
-	repository  CommentRepositoryInterface
-	userService *UserService
+	Repository  CommentRepositoryInterface
+	UserService *UserService
 }
 
 func NewUserService(repository UserRepositoryInterface) *UserService {
-	return &UserService{repository: repository}
+	return &UserService{Repository: repository}
 }
 
 func (s *UserService) CreateUser(user User) error {
 	log.Println("Creating user:", user.Username)
-	err := s.repository.CreateUser(user)
+	err := s.Repository.CreateUser(user)
 	if err != nil {
 		log.Printf("Error creating user: %v", err)
 	}
@@ -34,7 +34,7 @@ func (s *UserService) CreateUser(user User) error {
 
 func (s *UserService) GetUserByUsername(username string) (User, error) {
 	log.Println("Getting user by username:", username)
-	user, err := s.repository.GetUserByUsername(username)
+	user, err := s.Repository.GetUserByUsername(username)
 	if err != nil {
 		log.Printf("Error getting user by username: %v", err)
 	}
@@ -43,7 +43,7 @@ func (s *UserService) GetUserByUsername(username string) (User, error) {
 
 func (s *UserService) GetUserByID(userID string) (User, error) {
 	log.Println("Getting user by ID:", userID)
-	user, err := s.repository.GetUserByID(userID)
+	user, err := s.Repository.GetUserByID(userID)
 	if err != nil {
 		log.Printf("Error getting user by ID: %v", err)
 	}
@@ -52,7 +52,7 @@ func (s *UserService) GetUserByID(userID string) (User, error) {
 
 func (s *UserService) GetUsers() ([]User, error) {
 	log.Println("Getting all users")
-	users, err := s.repository.GetUsers()
+	users, err := s.Repository.GetUsers()
 	if err != nil {
 		log.Printf("Error getting users: %v", err)
 	}
@@ -60,7 +60,7 @@ func (s *UserService) GetUsers() ([]User, error) {
 }
 
 func NewPostService(repository PostRepositoryInterface) *PostService {
-	return &PostService{repository: repository}
+	return &PostService{Repository: repository}
 }
 
 func (s *PostService) CreatePost(title, content, authorID string) error {
@@ -72,7 +72,7 @@ func (s *PostService) CreatePost(title, content, authorID string) error {
 		AuthorID:  authorID,
 		CreatedAt: time.Now(),
 	}
-	err := s.repository.CreatePost(post)
+	err := s.Repository.CreatePost(post)
 	if err != nil {
 		log.Printf("Error creating post: %v", err)
 	}
@@ -81,7 +81,7 @@ func (s *PostService) CreatePost(title, content, authorID string) error {
 
 func (s *PostService) GetPosts() ([]Post, error) {
 	log.Println("Getting all posts")
-	posts, err := s.repository.GetPosts()
+	posts, err := s.Repository.GetPosts()
 	if err != nil {
 		log.Printf("Error getting posts: %v", err)
 	}
@@ -90,7 +90,7 @@ func (s *PostService) GetPosts() ([]Post, error) {
 
 func (s *PostService) GetPostById(id string) (Post, error) {
 	log.Println("Getting post by ID:", id)
-	post, err := s.repository.GetPostByID(id)
+	post, err := s.Repository.GetPostByID(id)
 	if err != nil {
 		log.Printf("Error getting post by ID: %v", err)
 	}
@@ -99,7 +99,7 @@ func (s *PostService) GetPostById(id string) (Post, error) {
 
 func (s *PostService) DeletePost(id string) error {
 	log.Println("Deleting post by ID:", id)
-	err := s.repository.DeletePost(id)
+	err := s.Repository.DeletePost(id)
 	if err != nil {
 		log.Printf("Error deleting post: %v", err)
 	}
@@ -108,7 +108,7 @@ func (s *PostService) DeletePost(id string) error {
 
 func (s *PostService) UpdatePost(id primitive.ObjectID, input Post) (Post, error) {
 	log.Println("Updating post by ID:", id.Hex())
-	currentPost, err := s.repository.GetPostByID(id.Hex())
+	currentPost, err := s.Repository.GetPostByID(id.Hex())
 	if err != nil {
 		log.Printf("Error getting post by ID: %v", err)
 		return Post{}, err
@@ -122,7 +122,7 @@ func (s *PostService) UpdatePost(id primitive.ObjectID, input Post) (Post, error
 	}
 	updateFields["author_id"] = currentPost.AuthorID
 	updateFields["created_at"] = currentPost.CreatedAt
-	updatedPost, err := s.repository.UpdatePost(id, updateFields)
+	updatedPost, err := s.Repository.UpdatePost(id, updateFields)
 	if err != nil {
 		log.Printf("Error updating post: %v", err)
 		return Post{}, err
@@ -132,12 +132,12 @@ func (s *PostService) UpdatePost(id primitive.ObjectID, input Post) (Post, error
 }
 
 func NewCommentService(repository CommentRepositoryInterface, userService *UserService) *CommentService {
-	return &CommentService{repository: repository, userService: userService}
+	return &CommentService{Repository: repository, UserService: userService}
 }
 
 func (s *CommentService) AddComment(postID, userID, content string) error {
 	log.Println("Adding comment to post:", postID)
-	user, err := s.userService.GetUserByID(userID)
+	user, err := s.UserService.GetUserByID(userID)
 	if err != nil {
 		log.Printf("Error getting user by ID: %v", err)
 		return err
@@ -149,7 +149,7 @@ func (s *CommentService) AddComment(postID, userID, content string) error {
 		Content:   content,
 		CreatedAt: time.Now(),
 	}
-	err = s.repository.AddComment(comment)
+	err = s.Repository.AddComment(comment)
 	if err != nil {
 		log.Printf("Error adding comment: %v", err)
 	}
@@ -158,7 +158,7 @@ func (s *CommentService) AddComment(postID, userID, content string) error {
 
 func (s *CommentService) GetComments(postID string) ([]Comment, error) {
 	log.Println("Getting comments for post:", postID)
-	comments, err := s.repository.GetComments(postID)
+	comments, err := s.Repository.GetComments(postID)
 	if err != nil {
 		log.Printf("Error getting comments: %v", err)
 	}
@@ -167,7 +167,7 @@ func (s *CommentService) GetComments(postID string) ([]Comment, error) {
 
 func (s *CommentService) GetAllComment() ([]Comment, error) {
 	log.Println("Getting all comments")
-	comments, err := s.repository.GetAllComments()
+	comments, err := s.Repository.GetAllComment()
 	if err != nil {
 		log.Printf("Error getting comments: %v", err)
 	}
@@ -176,7 +176,7 @@ func (s *CommentService) GetAllComment() ([]Comment, error) {
 
 func (s *CommentService) DeleteComment(id string) error {
 	log.Println("Deleting comment by ID:", id)
-	err := s.repository.DeleteComment(id)
+	err := s.Repository.DeleteComment(id)
 	if err != nil {
 		log.Printf("Error deleting comment: %v", err)
 	}
@@ -191,7 +191,7 @@ func (s *CommentService) UpdateComment(id primitive.ObjectID, input Comment) (Co
 			"content": input.Content,
 		},
 	}
-	updatedComment, err := s.repository.UpdateComment(context.TODO(), filter, update)
+	updatedComment, err := s.Repository.UpdateComment(context.TODO(), filter, update)
 	if err != nil {
 		log.Printf("Error updating comment: %v", err)
 		return Comment{}, err

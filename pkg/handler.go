@@ -8,16 +8,16 @@ import (
 )
 
 type Handler struct {
-	postService    *PostService
-	commentService *CommentService
-	userService    *UserService
+	PostService    *PostService
+	CommentService *CommentService
+	UserService    *UserService
 }
 
 func NewHandler(postService *PostService, commentService *CommentService, userService *UserService) *Handler {
 	return &Handler{
-		postService:    postService,
-		commentService: commentService,
-		userService:    userService,
+		PostService:    postService,
+		CommentService: commentService,
+		UserService:    userService,
 	}
 }
 
@@ -38,7 +38,7 @@ func (h *Handler) Register(c *gin.Context) {
 		input.Role = "user"
 	}
 
-	if err := h.userService.CreateUser(input); err != nil {
+	if err := h.UserService.CreateUser(input); err != nil {
 		log.Printf("Failed to register user: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register user"})
 		return
@@ -55,7 +55,7 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userService.GetUserByUsername(input.Username)
+	user, err := h.UserService.GetUserByUsername(input.Username)
 	log.Printf("Getting user: %v", user)
 	if err != nil {
 		log.Printf("Invalid username or password: %v", err)
@@ -88,7 +88,7 @@ func (h *Handler) CreatePost(c *gin.Context) {
 		return
 	}
 
-	err := h.postService.CreatePost(input.Title, input.Content, input.AuthorID)
+	err := h.PostService.CreatePost(input.Title, input.Content, input.AuthorID)
 	if err != nil {
 		log.Printf("Unable to create post: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to create post"})
@@ -100,7 +100,7 @@ func (h *Handler) CreatePost(c *gin.Context) {
 }
 
 func (h *Handler) GetPosts(c *gin.Context) {
-	posts, err := h.postService.GetPosts()
+	posts, err := h.PostService.GetPosts()
 	if err != nil {
 		log.Printf("Unable to fetch posts: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to fetch posts"})
@@ -123,7 +123,13 @@ func (h *Handler) AddComment(c *gin.Context) {
 		return
 	}
 
-	err := h.commentService.AddComment(postID, input.UserID, input.Content)
+	userID, err := primitive.ObjectIDFromHex(input.UserID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	err = h.CommentService.AddComment(postID, userID.Hex(), input.Content)
 	if err != nil {
 		log.Printf("Unable to add comment: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to add comment"})
@@ -136,7 +142,7 @@ func (h *Handler) AddComment(c *gin.Context) {
 
 func (h *Handler) GetComments(c *gin.Context) {
 	postID := c.Param("id")
-	comments, err := h.commentService.GetComments(postID)
+	comments, err := h.CommentService.GetComments(postID)
 	if err != nil {
 		log.Printf("Unable to fetch comments: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to fetch comments"})
@@ -147,7 +153,7 @@ func (h *Handler) GetComments(c *gin.Context) {
 }
 
 func (h *Handler) GetUsers(context *gin.Context) {
-	users, err := h.userService.GetUsers()
+	users, err := h.UserService.GetUsers()
 	if err != nil {
 		log.Printf("Unable to fetch users: %v", err)
 		context.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to fetch users"})
@@ -159,7 +165,7 @@ func (h *Handler) GetUsers(context *gin.Context) {
 
 func (h *Handler) GetPostById(context *gin.Context) {
 	postID := context.Param("id")
-	post, err := h.postService.GetPostById(postID)
+	post, err := h.PostService.GetPostById(postID)
 	if err != nil {
 		log.Printf("Unable to fetch post: %v", err)
 		context.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to fetch post"})
@@ -170,7 +176,7 @@ func (h *Handler) GetPostById(context *gin.Context) {
 
 func (h *Handler) DeletePost(context *gin.Context) {
 	postID := context.Param("id")
-	err := h.postService.DeletePost(postID)
+	err := h.PostService.DeletePost(postID)
 	if err != nil {
 		log.Printf("Unable to delete post: %v", err)
 		context.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to delete post"})
@@ -181,7 +187,7 @@ func (h *Handler) DeletePost(context *gin.Context) {
 }
 
 func (h *Handler) GetAllComment(context *gin.Context) {
-	comments, err := h.commentService.GetAllComment()
+	comments, err := h.CommentService.GetAllComment()
 	if err != nil {
 		log.Printf("Unable to fetch comments: %v", err)
 		context.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to fetch comments"})
@@ -192,7 +198,7 @@ func (h *Handler) GetAllComment(context *gin.Context) {
 
 func (h *Handler) DeleteComment(context *gin.Context) {
 	commentID := context.Param("commentID")
-	err := h.commentService.DeleteComment(commentID)
+	err := h.CommentService.DeleteComment(commentID)
 	if err != nil {
 		log.Printf("Unable to delete comment: %v", err)
 		context.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to delete comment"})
@@ -216,7 +222,7 @@ func (h *Handler) UpdatePost(context *gin.Context) {
 		return
 	}
 
-	post, err := h.postService.UpdatePost(objectID, input)
+	post, err := h.PostService.UpdatePost(objectID, input)
 	if err != nil {
 		log.Printf("Unable to update post: %v", err)
 		context.JSON(http.StatusInternalServerError, gin.H{
@@ -243,7 +249,7 @@ func (h *Handler) UpdateComment(context *gin.Context) {
 		return
 	}
 
-	comment, err := h.commentService.UpdateComment(objectID, input)
+	comment, err := h.CommentService.UpdateComment(objectID, input)
 	if err != nil {
 		log.Printf("Unable to update comment: %v", err)
 		context.JSON(http.StatusInternalServerError, gin.H{

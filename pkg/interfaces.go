@@ -18,7 +18,7 @@ type PostRepositoryInterface interface {
 type CommentRepositoryInterface interface {
 	AddComment(comment Comment) error
 	GetComments(postID string) ([]Comment, error)
-	GetAllComments() ([]Comment, error)
+	GetAllComment() ([]Comment, error)
 	DeleteComment(commentID string) error
 	UpdateComment(ctx context.Context, filter, updateFields bson.M) (Comment, error)
 }
