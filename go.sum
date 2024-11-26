@@ -1,3 +1,5 @@
+github.com/Takeso-user/in-mem-cache v0.1.4 h1:gH0kWa2/TZyDZB4NQyqkXfKhSP8AxrgtFZ9ELA1CwtM=
+github.com/Takeso-user/in-mem-cache v0.1.4/go.mod h1:4wOhEycQr4cxn6glYRORSGt57Bp5TuzXQhkSDnqzKto=
 github.com/bytedance/sonic v1.12.4 h1:9Csb3c9ZJhfUWeMtpCDCq6BUoH5ogfDFLUgQ/jG+R0k=
 github.com/bytedance/sonic v1.12.4/go.mod h1:B8Gt/XvtZ3Fqj+iSKMypzymZxw/FVwgIGKzMzT9r/rk=
 github.com/bytedance/sonic/loader v0.1.1/go.mod h1:ncP89zfokxS5LZrJxl5z0UJcsk4M4yY2JpfqGeCtNLU=

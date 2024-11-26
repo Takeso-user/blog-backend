@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"context"
+	"github.com/Takeso-user/in-mem-cache/cache"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"log"
@@ -10,17 +11,30 @@ import (
 
 type PostService struct {
 	Repository PostRepositoryInterface
+	Cache      *cache.Cache
 }
+
 type UserService struct {
 	Repository UserRepositoryInterface
+	Cache      *cache.Cache
 }
+
 type CommentService struct {
 	Repository  CommentRepositoryInterface
 	UserService *UserService
+	Cache       *cache.Cache
 }
 
-func NewUserService(repository UserRepositoryInterface) *UserService {
-	return &UserService{Repository: repository}
+func NewPostService(repository PostRepositoryInterface, cache *cache.Cache) *PostService {
+	return &PostService{Repository: repository, Cache: cache}
+}
+
+func NewCommentService(repository CommentRepositoryInterface, userService *UserService, cache *cache.Cache) *CommentService {
+	return &CommentService{Repository: repository, UserService: userService, Cache: cache}
+}
+
+func NewUserService(repository UserRepositoryInterface, cache *cache.Cache) *UserService {
+	return &UserService{Repository: repository, Cache: cache}
 }
 
 func (s *UserService) CreateUser(user User) error {
@@ -34,19 +48,32 @@ func (s *UserService) CreateUser(user User) error {
 
 func (s *UserService) GetUserByUsername(username string) (User, error) {
 	log.Println("Getting user by username:", username)
+	cachedUser, found := s.Cache.Get(username)
+	if found {
+		log.Printf("Found user in cache: %v", cachedUser)
+		return cachedUser.(User), nil
+	}
+
 	user, err := s.Repository.GetUserByUsername(username)
 	if err != nil {
 		log.Printf("Error getting user by username: %v", err)
 	}
+	s.Cache.Set(username, user)
 	return user, err
 }
 
 func (s *UserService) GetUserByID(userID string) (User, error) {
 	log.Println("Getting user by ID:", userID)
+	cachedUser, found := s.Cache.Get(userID)
+	if found {
+		log.Printf("Found user in cache: %v", cachedUser)
+		return cachedUser.(User), nil
+	}
 	user, err := s.Repository.GetUserByID(userID)
 	if err != nil {
 		log.Printf("Error getting user by ID: %v", err)
 	}
+	s.Cache.Set(user.Username, user)
 	return user, err
 }
 
@@ -57,10 +84,6 @@ func (s *UserService) GetUsers() ([]User, error) {
 		log.Printf("Error getting users: %v", err)
 	}
 	return users, err
-}
-
-func NewPostService(repository PostRepositoryInterface) *PostService {
-	return &PostService{Repository: repository}
 }
 
 func (s *PostService) CreatePost(title, content, authorID string) error {
@@ -90,10 +113,16 @@ func (s *PostService) GetPosts() ([]Post, error) {
 
 func (s *PostService) GetPostById(id string) (Post, error) {
 	log.Println("Getting post by ID:", id)
+	cachedPost, found := s.Cache.Get(id)
+	if found {
+		log.Printf("Found post in cache: %v", cachedPost)
+		return cachedPost.(Post), nil
+	}
 	post, err := s.Repository.GetPostByID(id)
 	if err != nil {
 		log.Printf("Error getting post by ID: %v", err)
 	}
+	s.Cache.Set(id, post)
 	return post, err
 }
 
@@ -129,10 +158,6 @@ func (s *PostService) UpdatePost(id primitive.ObjectID, input Post) (Post, error
 	}
 	log.Printf("Updated post: %v", updatedPost)
 	return updatedPost, nil
-}
-
-func NewCommentService(repository CommentRepositoryInterface, userService *UserService) *CommentService {
-	return &CommentService{Repository: repository, UserService: userService}
 }
 
 func (s *CommentService) AddComment(postID, userID, content string) error {

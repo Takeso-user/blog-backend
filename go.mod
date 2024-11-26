@@ -1,6 +1,6 @@
 module github.com/Takeso-user/blog-backend
 
-go 1.23
+go 1.23.3
 
 require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect  !!!
@@ -45,6 +45,7 @@ require (
 )
 
 require (
+	github.com/Takeso-user/in-mem-cache v0.1.4 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/klauspost/compress v1.13.6 // indirect

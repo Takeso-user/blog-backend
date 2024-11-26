@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/Takeso-user/in-mem-cache/cache"
 	"log"
 	"net/http"
 	"os"
@@ -31,10 +32,13 @@ func main() {
 	log.Println("Initializing repositories...")
 	repository := pkg.NewRepository(cfg.Database)
 
+	log.Println("Initializing cache...")
+	cacheInstance := cache.NewCache(5 * time.Minute)
+
 	log.Println("Initializing services...")
-	userService := pkg.NewUserService(repository.UserRepositoryInterface)
-	postService := pkg.NewPostService(repository.PostRepositoryInterface)
-	commentService := pkg.NewCommentService(repository.CommentRepositoryInterface, userService)
+	userService := pkg.NewUserService(repository.UserRepositoryInterface, cacheInstance)
+	postService := pkg.NewPostService(repository.PostRepositoryInterface, cacheInstance)
+	commentService := pkg.NewCommentService(repository.CommentRepositoryInterface, userService, cacheInstance)
 
 	log.Println("Initializing handlers...")
 	handler := pkg.NewHandler(postService, commentService, userService)
