@@ -2,7 +2,9 @@ package tests
 
 import (
 	"context"
+	"github.com/Takeso-user/in-mem-cache/cache"
 	"log"
+	"os"
 	"testing"
 	"time"
 
@@ -14,6 +16,16 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+var globalCache *cache.Cache
+
+func TestMain(m *testing.M) {
+
+	globalCache = cache.NewCache(5 * time.Minute)
+
+	code := m.Run()
+
+	os.Exit(code)
+}
 func Test_UserService_CreateUser_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -22,7 +34,7 @@ func Test_UserService_CreateUser_Success(t *testing.T) {
 		log.Printf("Error converting userID to ObjectID: %v", err)
 	}
 	mockUserRepo := mocks.NewMockUserRepositoryInterface(ctrl)
-	userService := pkg.NewUserService(mockUserRepo)
+	userService := pkg.NewUserService(mockUserRepo, globalCache)
 
 	user := pkg.User{ID: userID, Username: "testuser"}
 
@@ -37,7 +49,7 @@ func Test_UserService_GetUserByID_Success(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockUserRepo := mocks.NewMockUserRepositoryInterface(ctrl)
-	userService := pkg.NewUserService(mockUserRepo)
+	userService := pkg.NewUserService(mockUserRepo, globalCache)
 	userID, err := primitive.ObjectIDFromHex("000000000000000000000000")
 	if err != nil {
 		log.Printf("Error converting userID to ObjectID: %v", err)
@@ -55,7 +67,7 @@ func Test_PostService_CreatePost_Success(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockPostRepo := mocks.NewMockPostRepositoryInterface(ctrl)
-	postService := pkg.NewPostService(mockPostRepo)
+	postService := pkg.NewPostService(mockPostRepo, globalCache)
 	id, _ := primitive.ObjectIDFromHex("6745fdd700023c89744bd4e8")
 	fixedTime := time.Date(2024, time.November, 26, 18, 1, 33, 0, time.UTC)
 	post := pkg.Post{
@@ -83,8 +95,8 @@ func Test_CommentService_AddComment_Success(t *testing.T) {
 
 	mockCommentRepo := mocks.NewMockCommentRepositoryInterface(ctrl)
 	mockUserRepo := mocks.NewMockUserRepositoryInterface(ctrl)
-	userService := pkg.NewUserService(mockUserRepo)
-	commentService := pkg.NewCommentService(mockCommentRepo, userService)
+	userService := pkg.NewUserService(mockUserRepo, globalCache)
+	commentService := pkg.NewCommentService(mockCommentRepo, userService, globalCache)
 
 	userID, err := primitive.ObjectIDFromHex("000000000000000000000000")
 	if err != nil {
@@ -107,8 +119,8 @@ func Test_CommentService_UpdateComment_Success(t *testing.T) {
 
 	mockCommentRepo := mocks.NewMockCommentRepositoryInterface(ctrl)
 	mockUserRepo := mocks.NewMockUserRepositoryInterface(ctrl)
-	userService := pkg.NewUserService(mockUserRepo)
-	commentService := pkg.NewCommentService(mockCommentRepo, userService)
+	userService := pkg.NewUserService(mockUserRepo, globalCache)
+	commentService := pkg.NewCommentService(mockCommentRepo, userService, globalCache)
 
 	commentID := primitive.NewObjectID()
 	input := pkg.Comment{Content: "Updated Comment"}

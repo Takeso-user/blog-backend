@@ -3,25 +3,55 @@ package config
 import (
 	"context"
 	"fmt"
+	"github.com/joho/godotenv"
 	"log"
 	"os"
 	"sync"
 	"time"
 
-	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var (
-	once   sync.Once
-	uri    string
-	dbName string
+	once       sync.Once
+	uri        string
+	dbName     string
+	jwtSecret  string
+	mongoUser  string
+	mongoPass  string
+	secretsDir = "/run/secrets/"
 )
 
 type Config struct {
 	MongoClient *mongo.Client
 	Database    *mongo.Database
+}
+
+func LoadSecrets() {
+	log.Println("Loading secrets from Docker Secrets directory...")
+	mongoUser = readSecret("mongo_user")
+	mongoPass = readSecret("mongo_password")
+	jwtSecret = readSecret("jwt_secret")
+
+	if mongoUser == "" || mongoPass == "" {
+		log.Println("Secrets not found. Falling back to .env file.")
+		LoadEnv()
+	} else {
+		log.Println("Secrets loaded successfully.")
+		uri = fmt.Sprintf("mongodb://%s:%s@mongo:27017", mongoUser, mongoPass)
+		dbName = os.Getenv("MONGO_DATABASE") // Оставляем из окружения или .env
+	}
+}
+
+func readSecret(name string) string {
+	filePath := secretsDir + name
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		log.Printf("Secret %s not found: %v", name, err)
+		return ""
+	}
+	return string(data)
 }
 
 func LoadEnv() {
@@ -31,16 +61,18 @@ func LoadEnv() {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
 	log.Println("Environment variables loaded successfully.")
+
+	uri = os.Getenv("MONGO_URI")
+	dbName = os.Getenv("MONGO_DATABASE")
 }
 
 func ConnectToMongo() (*Config, error) {
 	once.Do(func() {
-		uri = os.Getenv("MONGO_URI")
-		dbName = os.Getenv("MONGO_DATABASE")
+		LoadSecrets()
 	})
 
 	if uri == "" || dbName == "" {
-		return nil, fmt.Errorf("MONGO_URI or MONGO_DATABASE is not set in the environment")
+		return nil, fmt.Errorf("MONGO_URI or MONGO_DATABASE is not set")
 	}
 
 	log.Println("Creating MongoDB client options...")
@@ -59,7 +91,6 @@ func ConnectToMongo() (*Config, error) {
 	}
 
 	log.Println("Connected to MongoDB successfully.")
-
 	database := client.Database(dbName)
 
 	return &Config{

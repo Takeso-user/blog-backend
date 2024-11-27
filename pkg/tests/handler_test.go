@@ -23,7 +23,7 @@ func TestRegister(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockUserService := mocks.NewMockUserRepositoryInterface(ctrl)
-	userService := pkg.NewUserService(mockUserService)
+	userService := pkg.NewUserService(mockUserService, globalCache)
 	mockUserService.EXPECT().CreateUser(gomock.Any()).Return(nil)
 
 	gin.SetMode(gin.TestMode)
@@ -44,7 +44,7 @@ func TestLogin(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockUserService := mocks.NewMockUserRepositoryInterface(ctrl)
-	userService := pkg.NewUserService(mockUserService)
+	userService := pkg.NewUserService(mockUserService, globalCache)
 
 	// Hash the password used in the test
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
@@ -68,7 +68,7 @@ func TestGetUsers(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockUserService := mocks.NewMockUserRepositoryInterface(ctrl)
-	userService := pkg.NewUserService(mockUserService)
+	userService := pkg.NewUserService(mockUserService, globalCache)
 	mockUserService.EXPECT().GetUsers().Return([]pkg.User{{Username: "testuser"}}, nil)
 
 	gin.SetMode(gin.TestMode)
@@ -89,7 +89,7 @@ func TestCreatePost(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockPostService := mocks.NewMockPostRepositoryInterface(ctrl)
-	postService := pkg.NewPostService(mockPostService)
+	postService := pkg.NewPostService(mockPostService, globalCache)
 	mockPostService.EXPECT().CreatePost(gomock.Any()).Return(nil)
 
 	gin.SetMode(gin.TestMode)
@@ -111,7 +111,7 @@ func TestAddComment(t *testing.T) {
 
 	mockCommentService := mocks.NewMockCommentRepositoryInterface(ctrl)
 	mockUserService := mocks.NewMockUserRepositoryInterface(ctrl)
-	commentService := pkg.NewCommentService(mockCommentService, pkg.NewUserService(mockUserService))
+	commentService := pkg.NewCommentService(mockCommentService, pkg.NewUserService(mockUserService, globalCache), globalCache)
 
 	// Convert userID to primitive.ObjectID
 	userID, _ := primitive.ObjectIDFromHex("000000000000000000000000")
@@ -138,7 +138,7 @@ func TestGetComments(t *testing.T) {
 
 	mockCommentService := mocks.NewMockCommentRepositoryInterface(ctrl)
 	mockUserService := mocks.NewMockUserRepositoryInterface(ctrl)
-	commentService := pkg.NewCommentService(mockCommentService, pkg.NewUserService(mockUserService))
+	commentService := pkg.NewCommentService(mockCommentService, pkg.NewUserService(mockUserService, globalCache), globalCache)
 	mockCommentService.EXPECT().GetComments("postID").Return([]pkg.Comment{{Content: "Test Comment"}}, nil)
 
 	gin.SetMode(gin.TestMode)
@@ -159,7 +159,7 @@ func TestGetPostById(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockPostService := mocks.NewMockPostRepositoryInterface(ctrl)
-	postService := pkg.NewPostService(mockPostService)
+	postService := pkg.NewPostService(mockPostService, globalCache)
 	mockPostService.EXPECT().GetPostByID("postID").Return(pkg.Post{Title: "Test Title"}, nil)
 
 	gin.SetMode(gin.TestMode)
@@ -180,7 +180,7 @@ func TestDeletePost(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockPostService := mocks.NewMockPostRepositoryInterface(ctrl)
-	postService := pkg.NewPostService(mockPostService)
+	postService := pkg.NewPostService(mockPostService, globalCache)
 	mockPostService.EXPECT().DeletePost("postID").Return(nil)
 
 	gin.SetMode(gin.TestMode)
@@ -202,7 +202,7 @@ func TestGetAllComments(t *testing.T) {
 
 	mockCommentService := mocks.NewMockCommentRepositoryInterface(ctrl)
 	mockUserService := mocks.NewMockUserRepositoryInterface(ctrl)
-	commentService := pkg.NewCommentService(mockCommentService, pkg.NewUserService(mockUserService))
+	commentService := pkg.NewCommentService(mockCommentService, pkg.NewUserService(mockUserService, globalCache), globalCache)
 	mockCommentService.EXPECT().GetAllComment().Return([]pkg.Comment{{Content: "Test Comment"}}, nil)
 
 	gin.SetMode(gin.TestMode)
@@ -224,7 +224,7 @@ func TestDeleteComment(t *testing.T) {
 
 	mockCommentService := mocks.NewMockCommentRepositoryInterface(ctrl)
 	mockUserService := mocks.NewMockUserRepositoryInterface(ctrl)
-	commentService := pkg.NewCommentService(mockCommentService, pkg.NewUserService(mockUserService))
+	commentService := pkg.NewCommentService(mockCommentService, pkg.NewUserService(mockUserService, globalCache), globalCache)
 	mockCommentService.EXPECT().DeleteComment("commentID").Return(nil)
 
 	gin.SetMode(gin.TestMode)
@@ -240,35 +240,12 @@ func TestDeleteComment(t *testing.T) {
 	assert.Contains(t, w.Body.String(), "Comment deleted successfully")
 }
 
-//func TestUpdatePost(t *testing.T) {
-//	ctrl := gomock.NewController(t)
-//	defer ctrl.Finish()
-
-//	mockPostService := mocks.NewMockPostRepositoryInterface(ctrl)
-//	postService := pkg.NewPostService(mockPostService)
-//	mockPostService.EXPECT().UpdatePost(gomock.Any(), gomock.Any()).Return(pkg.Post{Title: "Updated Title"}, nil)
-
-//	gin.SetMode(gin.TestMode)
-//	router := gin.Default()
-//	handler := &pkg.Handler{PostService: postService}
-//	router.PUT("/posts/:id", handler.UpdatePost)
-
-//	w := httptest.NewRecorder()
-//	validObjectID := primitive.NewObjectID().Hex()
-//	req, _ := http.NewRequest("PUT", "/posts/"+validObjectID, strings.NewReader(`{"title":"Updated Title","content":"Updated Content"}`))
-
-//	router.ServeHTTP(w, req)
-
-//	assert.Equal(t, http.StatusOK, w.Code)
-//	assert.Contains(t, w.Body.String(), "Post updated successfully")
-//}
-
 func TestUpdatePost(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	mockPostService := mocks.NewMockPostRepositoryInterface(ctrl)
-	postService := pkg.NewPostService(mockPostService)
+	postService := pkg.NewPostService(mockPostService, globalCache)
 
 	validObjectID := primitive.NewObjectID()
 	testPost := pkg.Post{
@@ -302,7 +279,7 @@ func TestUpdateComment(t *testing.T) {
 	validObjectID := primitive.NewObjectID()
 	mockCommentService := mocks.NewMockCommentRepositoryInterface(ctrl)
 	mockUserService := mocks.NewMockUserRepositoryInterface(ctrl)
-	commentService := pkg.NewCommentService(mockCommentService, pkg.NewUserService(mockUserService))
+	commentService := pkg.NewCommentService(mockCommentService, pkg.NewUserService(mockUserService, globalCache), globalCache)
 
 	// Expect the UpdateComment call with the correct arguments
 	mockCommentService.EXPECT().UpdateComment(
