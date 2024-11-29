@@ -10,8 +10,8 @@ services:
     ports:
       - "8888:8080"
     depends_on:
-      - mongo
-      #  condition: service_healthy
+      mongo:
+        condition: service_healthy
     environment:
       - DOCKER_CONTAINER=true
     networks:
@@ -29,7 +29,7 @@ services:
     volumes:
       - mongo-data:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
       interval: 10s
       retries: 5
       start_period: 10s
