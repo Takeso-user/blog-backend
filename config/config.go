@@ -40,20 +40,17 @@ func LoadEnv() {
 		log.Fatal("MONGO_USER, MONGO_PASSWORD, MONGO_DATABASE and JWT_SECRET are required")
 	}
 
-	// Determine host based on environment
 	host := "localhost"
 	if os.Getenv("DOCKER_CONTAINER") == "true" {
 		host = "mongo"
 	}
 
-	// Construct MongoDB URI
 	uri = fmt.Sprintf("mongodb://%s:%s@%s:27017/%s?authSource=admin",
 		mongoUser,
 		mongoPass,
 		host,
 		dbName,
 	)
-
 }
 
 func ConnectToMongo() (*Config, error) {
@@ -68,7 +65,6 @@ func ConnectToMongo() (*Config, error) {
 		return nil, fmt.Errorf("failed to connect to MongoDB: %w", err)
 	}
 
-	// Проверка соединения
 	err = client.Ping(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to ping MongoDB: %w", err)
