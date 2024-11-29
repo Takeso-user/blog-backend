@@ -1,15 +1,19 @@
 package tests
 
 import (
-	"github.com/Takeso-user/blog-backend/pkg"
-	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/Takeso-user/blog-backend/pkg"
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_MissingTokenReturnsUnauthorized(t *testing.T) {
+	ctx := context.Background()
 	gin.SetMode(gin.TestMode)
 	router := gin.Default()
 	router.Use(pkg.JWTMiddleware())
@@ -19,7 +23,7 @@ func Test_MissingTokenReturnsUnauthorized(t *testing.T) {
 	})
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/protected", nil)
+	req, _ := http.NewRequestWithContext(ctx, "GET", "/protected", nil)
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
@@ -27,6 +31,7 @@ func Test_MissingTokenReturnsUnauthorized(t *testing.T) {
 }
 
 func Test_InvalidTokenReturnsUnauthorized(t *testing.T) {
+	ctx := context.Background()
 	gin.SetMode(gin.TestMode)
 	router := gin.Default()
 	router.Use(pkg.JWTMiddleware())
@@ -36,7 +41,7 @@ func Test_InvalidTokenReturnsUnauthorized(t *testing.T) {
 	})
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/protected", nil)
+	req, _ := http.NewRequestWithContext(ctx, "GET", "/protected", nil)
 	req.Header.Set("Authorization", "Bearer invalid_token")
 	router.ServeHTTP(w, req)
 
@@ -45,6 +50,7 @@ func Test_InvalidTokenReturnsUnauthorized(t *testing.T) {
 }
 
 func Test_ValidTokenGrantsAccess(t *testing.T) {
+	ctx := context.Background()
 	gin.SetMode(gin.TestMode)
 	router := gin.Default()
 	router.Use(pkg.JWTMiddleware())
@@ -54,10 +60,10 @@ func Test_ValidTokenGrantsAccess(t *testing.T) {
 	})
 
 	token, err := pkg.GenerateJWT(pkg.User{Username: "testuser", Role: "user", Password: "password123"})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/protected", nil)
+	req, _ := http.NewRequestWithContext(ctx, "GET", "/protected", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	router.ServeHTTP(w, req)
 

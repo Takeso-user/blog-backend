@@ -2,11 +2,12 @@ package tests
 
 import (
 	"context"
-	"go.mongodb.org/mongo-driver/bson"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"go.mongodb.org/mongo-driver/bson"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
@@ -21,7 +22,7 @@ import (
 func TestRegister(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
+	ctx := context.Background()
 	mockUserService := mocks.NewMockUserRepositoryInterface(ctrl)
 	userService := pkg.NewUserService(mockUserService, globalCache)
 	mockUserService.EXPECT().CreateUser(gomock.Any()).Return(nil)
@@ -32,7 +33,7 @@ func TestRegister(t *testing.T) {
 	router.POST("/auth/register", handler.Register)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", "/auth/register", strings.NewReader(`{"username":"testuser","password":"password123"}`))
+	req, _ := http.NewRequestWithContext(ctx, "POST", "/auth/register", strings.NewReader(`{"username":"testuser","password":"password123"}`))
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -42,7 +43,7 @@ func TestRegister(t *testing.T) {
 func TestLogin(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
+	ctx := context.Background()
 	mockUserService := mocks.NewMockUserRepositoryInterface(ctrl)
 	userService := pkg.NewUserService(mockUserService, globalCache)
 
@@ -56,7 +57,7 @@ func TestLogin(t *testing.T) {
 	router.POST("/auth/login", handler.Login)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", "/auth/login", strings.NewReader(`{"username":"testuser","password":"password123"}`))
+	req, _ := http.NewRequestWithContext(ctx, "POST", "/auth/login", strings.NewReader(`{"username":"testuser","password":"password123"}`))
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -66,7 +67,7 @@ func TestLogin(t *testing.T) {
 func TestGetUsers(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
+	ctx := context.Background()
 	mockUserService := mocks.NewMockUserRepositoryInterface(ctrl)
 	userService := pkg.NewUserService(mockUserService, globalCache)
 	mockUserService.EXPECT().GetUsers().Return([]pkg.User{{Username: "testuser"}}, nil)
@@ -77,7 +78,7 @@ func TestGetUsers(t *testing.T) {
 	router.GET("/auth/users", handler.GetUsers)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/auth/users", nil)
+	req, _ := http.NewRequestWithContext(ctx, "GET", "/auth/users", nil)
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -87,7 +88,7 @@ func TestGetUsers(t *testing.T) {
 func TestCreatePost(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
+	ctx := context.Background()
 	mockPostService := mocks.NewMockPostRepositoryInterface(ctrl)
 	postService := pkg.NewPostService(mockPostService, globalCache)
 	mockPostService.EXPECT().CreatePost(gomock.Any()).Return(nil)
@@ -98,7 +99,7 @@ func TestCreatePost(t *testing.T) {
 	router.POST("/posts", handler.CreatePost)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", "/posts", strings.NewReader(`{"title":"Test Title","content":"Test Content","author_id":"authorID"}`))
+	req, _ := http.NewRequestWithContext(ctx, "POST", "/posts", strings.NewReader(`{"title":"Test Title","content":"Test Content","author_id":"authorID"}`))
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -108,7 +109,7 @@ func TestCreatePost(t *testing.T) {
 func TestAddComment(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
+	ctx := context.Background()
 	mockCommentService := mocks.NewMockCommentRepositoryInterface(ctrl)
 	mockUserService := mocks.NewMockUserRepositoryInterface(ctrl)
 	commentService := pkg.NewCommentService(mockCommentService, pkg.NewUserService(mockUserService, globalCache), globalCache)
@@ -124,7 +125,7 @@ func TestAddComment(t *testing.T) {
 	router.POST("/posts/:id/comments", handler.AddComment)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", "/posts/postID/comments", strings.NewReader(`{"user_id":"000000000000000000000000","content":"Test Comment"}`))
+	req, _ := http.NewRequestWithContext(ctx, "POST", "/posts/postID/comments", strings.NewReader(`{"user_id":"000000000000000000000000","content":"Test Comment"}`))
 	req.Header.Set("Content-Type", "application/json")
 	router.ServeHTTP(w, req)
 
@@ -135,7 +136,7 @@ func TestAddComment(t *testing.T) {
 func TestGetComments(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
+	ctx := context.Background()
 	mockCommentService := mocks.NewMockCommentRepositoryInterface(ctrl)
 	mockUserService := mocks.NewMockUserRepositoryInterface(ctrl)
 	commentService := pkg.NewCommentService(mockCommentService, pkg.NewUserService(mockUserService, globalCache), globalCache)
@@ -147,7 +148,7 @@ func TestGetComments(t *testing.T) {
 	router.GET("/posts/:id/comments", handler.GetComments)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/posts/postID/comments", nil)
+	req, _ := http.NewRequestWithContext(ctx, "GET", "/posts/postID/comments", nil)
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -157,7 +158,7 @@ func TestGetComments(t *testing.T) {
 func TestGetPostById(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
+	ctx := context.Background()
 	mockPostService := mocks.NewMockPostRepositoryInterface(ctrl)
 	postService := pkg.NewPostService(mockPostService, globalCache)
 	mockPostService.EXPECT().GetPostByID("postID").Return(pkg.Post{Title: "Test Title"}, nil)
@@ -168,7 +169,7 @@ func TestGetPostById(t *testing.T) {
 	router.GET("/posts/:id", handler.GetPostById)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/posts/postID", nil)
+	req, _ := http.NewRequestWithContext(ctx, "GET", "/posts/postID", nil)
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -178,7 +179,7 @@ func TestGetPostById(t *testing.T) {
 func TestDeletePost(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
+	ctx := context.Background()
 	mockPostService := mocks.NewMockPostRepositoryInterface(ctrl)
 	postService := pkg.NewPostService(mockPostService, globalCache)
 	mockPostService.EXPECT().DeletePost("postID").Return(nil)
@@ -189,7 +190,7 @@ func TestDeletePost(t *testing.T) {
 	router.DELETE("/posts/:id", handler.DeletePost)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("DELETE", "/posts/postID", nil)
+	req, _ := http.NewRequestWithContext(ctx, "DELETE", "/posts/postID", nil)
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -199,7 +200,7 @@ func TestDeletePost(t *testing.T) {
 func TestGetAllComments(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
+	ctx := context.Background()
 	mockCommentService := mocks.NewMockCommentRepositoryInterface(ctrl)
 	mockUserService := mocks.NewMockUserRepositoryInterface(ctrl)
 	commentService := pkg.NewCommentService(mockCommentService, pkg.NewUserService(mockUserService, globalCache), globalCache)
@@ -211,7 +212,7 @@ func TestGetAllComments(t *testing.T) {
 	router.GET("/comments", handler.GetAllComment)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/comments", nil)
+	req, _ := http.NewRequestWithContext(ctx, "GET", "/comments", nil)
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -221,7 +222,7 @@ func TestGetAllComments(t *testing.T) {
 func TestDeleteComment(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
+	ctx := context.Background()
 	mockCommentService := mocks.NewMockCommentRepositoryInterface(ctrl)
 	mockUserService := mocks.NewMockUserRepositoryInterface(ctrl)
 	commentService := pkg.NewCommentService(mockCommentService, pkg.NewUserService(mockUserService, globalCache), globalCache)
@@ -233,7 +234,7 @@ func TestDeleteComment(t *testing.T) {
 	router.DELETE("/comments/:commentID", handler.DeleteComment)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("DELETE", "/comments/commentID", nil)
+	req, _ := http.NewRequestWithContext(ctx, "DELETE", "/comments/commentID", nil)
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -243,7 +244,7 @@ func TestDeleteComment(t *testing.T) {
 func TestUpdatePost(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
+	ctx := context.Background()
 	mockPostService := mocks.NewMockPostRepositoryInterface(ctrl)
 	postService := pkg.NewPostService(mockPostService, globalCache)
 
@@ -262,7 +263,7 @@ func TestUpdatePost(t *testing.T) {
 	router.PUT("/posts/:id", handler.UpdatePost)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("PUT", "/posts/"+validObjectID.Hex(), strings.NewReader(`{"title":"Updated Title","content":"Updated Content"}`))
+	req, _ := http.NewRequestWithContext(ctx, "PUT", "/posts/"+validObjectID.Hex(), strings.NewReader(`{"title":"Updated Title","content":"Updated Content"}`))
 	req.Header.Set("Content-Type", "application/json")
 
 	router.ServeHTTP(w, req)
@@ -275,7 +276,7 @@ func TestUpdatePost(t *testing.T) {
 func TestUpdateComment(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
+	ctx := context.Background()
 	validObjectID := primitive.NewObjectID()
 	mockCommentService := mocks.NewMockCommentRepositoryInterface(ctrl)
 	mockUserService := mocks.NewMockUserRepositoryInterface(ctrl)
@@ -294,7 +295,7 @@ func TestUpdateComment(t *testing.T) {
 	router.PUT("/comments/:commentID", handler.UpdateComment)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("PUT", "/comments/"+validObjectID.Hex(), strings.NewReader(`{"content":"Updated Comment"}`))
+	req, _ := http.NewRequestWithContext(ctx, "PUT", "/comments/"+validObjectID.Hex(), strings.NewReader(`{"content":"Updated Comment"}`))
 	req.Header.Set("Content-Type", "application/json")
 	router.ServeHTTP(w, req)
 

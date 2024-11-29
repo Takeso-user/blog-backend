@@ -65,13 +65,13 @@ func ConnectToMongo() (*Config, error) {
 
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to MongoDB: %v", err)
+		return nil, fmt.Errorf("failed to connect to MongoDB: %w", err)
 	}
 
 	// Проверка соединения
 	err = client.Ping(ctx, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to ping MongoDB: %v", err)
+		return nil, fmt.Errorf("failed to ping MongoDB: %w", err)
 	}
 
 	database := client.Database(dbName)

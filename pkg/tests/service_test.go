@@ -2,16 +2,18 @@ package tests
 
 import (
 	"context"
-	"github.com/Takeso-user/in-mem-cache/cache"
 	"log"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/Takeso-user/in-mem-cache/cache"
+
 	"github.com/Takeso-user/blog-backend/pkg"
 	"github.com/Takeso-user/blog-backend/pkg/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -41,7 +43,7 @@ func Test_UserService_CreateUser_Success(t *testing.T) {
 	mockUserRepo.EXPECT().CreateUser(user).Return(nil)
 
 	err = userService.CreateUser(user)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func Test_UserService_GetUserByID_Success(t *testing.T) {
@@ -59,7 +61,7 @@ func Test_UserService_GetUserByID_Success(t *testing.T) {
 	mockUserRepo.EXPECT().GetUserByID(userID.Hex()).Return(expectedUser, nil)
 
 	user, err := userService.GetUserByID(userID.Hex())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedUser, user)
 }
 func Test_PostService_CreatePost_Success(t *testing.T) {
@@ -86,7 +88,7 @@ func Test_PostService_CreatePost_Success(t *testing.T) {
 	})
 
 	err := postService.CreatePost(post.Title, post.Content, post.AuthorID)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func Test_CommentService_AddComment_Success(t *testing.T) {
@@ -110,7 +112,7 @@ func Test_CommentService_AddComment_Success(t *testing.T) {
 	mockCommentRepo.EXPECT().AddComment(gomock.Any()).Return(nil)
 
 	err = commentService.AddComment(postID, userID.Hex(), content)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func Test_CommentService_UpdateComment_Success(t *testing.T) {
@@ -132,6 +134,6 @@ func Test_CommentService_UpdateComment_Success(t *testing.T) {
 	).Return(pkg.Comment{Content: "Updated Comment"}, nil)
 
 	updatedComment, err := commentService.UpdateComment(commentID, input)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "Updated Comment", updatedComment.Content)
 }

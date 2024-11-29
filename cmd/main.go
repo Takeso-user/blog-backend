@@ -3,12 +3,13 @@ package main
 import (
 	"context"
 	"errors"
-	"github.com/Takeso-user/in-mem-cache/cache"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
+
+	"github.com/Takeso-user/in-mem-cache/cache"
 
 	"github.com/Takeso-user/blog-backend/config"
 	"github.com/Takeso-user/blog-backend/pkg"
@@ -69,8 +70,12 @@ func main() {
 	}
 
 	srv := &http.Server{
-		Addr:    ":8080",
-		Handler: router,
+		Addr:              ":8080",
+		Handler:           router,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       120 * time.Second,
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 
 	log.Println("Starting server on :8080...")
