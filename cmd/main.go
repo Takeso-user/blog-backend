@@ -13,8 +13,8 @@ import (
 
 	"github.com/Takeso-user/in-mem-cache/cache"
 
-	_ "github.com/Takeso-user/blog-backend/cmd/docs"
 	"github.com/Takeso-user/blog-backend/config"
+	_ "github.com/Takeso-user/blog-backend/docs"
 	"github.com/Takeso-user/blog-backend/pkg"
 	"github.com/gin-gonic/gin"
 )
@@ -23,12 +23,16 @@ import (
 //	@version		1.0
 //	@description	This is a simple blog API
 
+//	@contact.name	API Support
+//	@contact.url	http://www.swagger.io/support
+//	@contact.email	support@swagger.io
+
 //	@host		localhost:8080
 //	@BasePath	/
 
-//	@securityDefinitions.api_key:	ApiKeyAuth
-//	@in								header
-//	@name							Authorization
+//	@securityDefinitions.apikey	ApiKeyAuth
+//	@in							header
+//	@name						Authorization
 
 func main() {
 	log.Println("Loading environment variables...")
