@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"errors"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"log"
 	"net/http"
 	"os"
@@ -12,9 +14,25 @@ import (
 	"github.com/Takeso-user/in-mem-cache/cache"
 
 	"github.com/Takeso-user/blog-backend/config"
+	_ "github.com/Takeso-user/blog-backend/docs"
 	"github.com/Takeso-user/blog-backend/pkg"
 	"github.com/gin-gonic/gin"
 )
+
+//	@title			Blog API
+//	@version		1.0
+//	@description	This is a simple blog API
+
+//	@contact.name	API Support
+//	@contact.url	http://www.swagger.io/support
+//	@contact.email	support@swagger.io
+
+//	@host		localhost:8080
+//	@BasePath	/
+
+//	@securityDefinitions.apikey	ApiKeyAuth
+//	@in							header
+//	@name						Authorization
 
 func main() {
 	log.Println("Loading environment variables...")
@@ -46,6 +64,7 @@ func main() {
 
 	log.Println("Setting up router...")
 	router := gin.Default()
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	{
 		router.POST("/auth/register", handler.Register)
 		router.POST("/auth/login", handler.Login)

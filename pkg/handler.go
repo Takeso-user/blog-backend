@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	_ "github.com/Takeso-user/blog-backend/docs"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"log"
@@ -21,6 +22,20 @@ func NewHandler(postService *PostService, commentService *CommentService, userSe
 	}
 }
 
+type Response map[string]interface{}
+
+// Register godoc
+//
+//	@Summary		Register a new user
+//	@Description	Register a new user
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			input	body		User	true	"User object"
+//	@Success		200		{object}	Response
+//	@Failure		400		{object}	Response
+//	@Failure		500		{object}	Response
+//	@Router			/auth/register [post]
 func (h *Handler) Register(c *gin.Context) {
 	var input User
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -48,6 +63,20 @@ func (h *Handler) Register(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User registered successfully"})
 }
 
+// Login godoc
+//
+//	@Summary		Login a user
+//
+//	@Description	Login a user
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			input	body		User	true	"User object"
+//	@Success		200		{object}	Response
+//	@Failure		400		{object}	Response
+//	@Failure		401		{object}	Response
+//	@Failure		500		{object}	Response
+//	@Router			/auth/login [post]
 func (h *Handler) Login(c *gin.Context) {
 	var input User
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -81,6 +110,22 @@ func (h *Handler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"token": token})
 }
 
+// CreatePost godoc
+//
+//	@Summary		Create a new post
+//
+//	@Description	Create a new post
+//
+//	@Security		ApiKeyAuth
+//
+//	@Tags			posts
+//	@Accept			json
+//	@Produce		json
+//	@Param			input	body		Post	true	"Post object"
+//	@Success		200		{object}	Response
+//	@Failure		400		{object}	Response
+//	@Failure		500		{object}	Response
+//	@Router			/api/posts [post]
 func (h *Handler) CreatePost(c *gin.Context) {
 	var input Post
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -99,6 +144,19 @@ func (h *Handler) CreatePost(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Post created successfully"})
 }
 
+// GetPosts godoc
+//
+//	@Summary		Get all posts
+//
+//	@Description	Get all posts
+//
+//	@Security		ApiKeyAuth
+//
+//	@Tags			posts
+//	@Produce		json
+//	@Success		200	{array}		Post
+//	@Failure		500	{object}	Response
+//	@Router			/api/posts [get]
 func (h *Handler) GetPosts(c *gin.Context) {
 	posts, err := h.PostService.GetPosts()
 	if err != nil {
@@ -110,6 +168,23 @@ func (h *Handler) GetPosts(c *gin.Context) {
 	c.JSON(http.StatusOK, posts)
 }
 
+// AddComment godoc
+//
+//	@Summary		Add a comment to a post
+//
+//	@Description	Add a comment to a post
+//
+//	@Security		ApiKeyAuth
+//
+//	@Tags			comments
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		string	true	"Post ID"
+//	@Param			input	body		Comment	true	"Comment object"
+//	@Success		200		{object}	Response
+//	@Failure		400		{object}	Response
+//	@Failure		500		{object}	Response
+//	@Router			/api/posts/{id}/comments [post]
 func (h *Handler) AddComment(c *gin.Context) {
 	postID := c.Param("id")
 
@@ -140,6 +215,20 @@ func (h *Handler) AddComment(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Comment added successfully"})
 }
 
+// GetComments godoc
+//
+//	@Summary		Get comments for a post
+//
+//	@Description	Get comments for a post
+//
+//	@Security		ApiKeyAuth
+//
+//	@Tags			comments
+//	@Produce		json
+//	@Param			id	path		string	true	"Post ID"
+//	@Success		200	{array}		Comment
+//	@Failure		500	{object}	Response
+//	@Router			/api/posts/{id}/comments [get]
 func (h *Handler) GetComments(c *gin.Context) {
 	postID := c.Param("id")
 	comments, err := h.CommentService.GetComments(postID)
@@ -152,6 +241,19 @@ func (h *Handler) GetComments(c *gin.Context) {
 	c.JSON(http.StatusOK, comments)
 }
 
+// GetUsers godoc
+//
+//	@Summary		Get all users
+//
+//	@Description	Get all users
+//
+//	@Security		ApiKeyAuth
+//
+//	@Tags			users
+//	@Produce		json
+//	@Success		200	{array}		User
+//	@Failure		500	{object}	Response
+//	@Router			/auth/users [get]
 func (h *Handler) GetUsers(context *gin.Context) {
 	users, err := h.UserService.GetUsers()
 	if err != nil {
@@ -163,6 +265,17 @@ func (h *Handler) GetUsers(context *gin.Context) {
 	context.JSON(http.StatusOK, users)
 }
 
+// GetPostById godoc
+//
+//	@Summary		Get a post by ID
+//	@Description	Get a post by ID
+//	@Security		ApiKeyAuth
+//	@Tags			posts
+//	@Produce		json
+//	@Param			id	path		string	true	"Post ID"
+//	@Success		200	{object}	Post
+//	@Failure		500	{object}	Response
+//	@Router			/api/posts/{id} [get]
 func (h *Handler) GetPostById(context *gin.Context) {
 	postID := context.Param("id")
 	post, err := h.PostService.GetPostById(postID)
@@ -174,6 +287,17 @@ func (h *Handler) GetPostById(context *gin.Context) {
 	context.JSON(http.StatusOK, post)
 }
 
+// DeletePost godoc
+//
+//	@Summary		Get a post by ID
+//	@Description	Get a post by ID
+//	@Security		ApiKeyAuth
+//	@Tags			posts
+//	@Produce		json
+//	@Param			id	path		string	true	"Post ID"
+//	@Success		200	{object}	Post
+//	@Failure		500	{object}	Response
+//	@Router			/api/posts/{id} [delete]
 func (h *Handler) DeletePost(context *gin.Context) {
 	postID := context.Param("id")
 	err := h.PostService.DeletePost(postID)
@@ -186,6 +310,16 @@ func (h *Handler) DeletePost(context *gin.Context) {
 	context.JSON(http.StatusOK, gin.H{"message": "Post deleted successfully"})
 }
 
+// GetAllComment godoc
+//
+//	@Summary		Get all comments
+//	@Description	Get all comments
+//	@Security		ApiKeyAuth
+//	@Tags			comments
+//	@Produce		json
+//	@Success		200	{array}		Comment
+//	@Failure		500	{object}	Response
+//	@Router			/api/posts/comments [get]
 func (h *Handler) GetAllComment(context *gin.Context) {
 	comments, err := h.CommentService.GetAllComment()
 	if err != nil {
@@ -196,6 +330,16 @@ func (h *Handler) GetAllComment(context *gin.Context) {
 	context.JSON(http.StatusOK, comments)
 }
 
+// DeleteComment godoc
+//
+//	@Summary		Delete a comment
+//	@Description	Delete a comment
+//	@Tags			comments
+//	@Produce		json
+//	@Param			commentID	path		string	true	"Comment ID"
+//	@Success		200			{object}	Response
+//	@Failure		500			{object}	Response
+//	@Router			/api/posts/comments/{commentID} [delete]
 func (h *Handler) DeleteComment(context *gin.Context) {
 	commentID := context.Param("commentID")
 	err := h.CommentService.DeleteComment(commentID)
@@ -208,6 +352,20 @@ func (h *Handler) DeleteComment(context *gin.Context) {
 	context.JSON(http.StatusOK, gin.H{"message": "Comment deleted successfully"})
 }
 
+// UpdatePost godoc
+//
+//	@Summary		Update a post
+//	@Description	Update a post
+//	@Security		ApiKeyAuth
+//	@Tags			posts
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		string	true	"Post ID"
+//	@Param			input	body		Post	true	"Post object"
+//	@Success		200		{object}	Response
+//	@Failure		400		{object}	Response
+//	@Failure		500		{object}	Response
+//	@Router			/api/posts/{id} [patch]
 func (h *Handler) UpdatePost(context *gin.Context) {
 	postID := context.Param("id")
 
@@ -235,6 +393,20 @@ func (h *Handler) UpdatePost(context *gin.Context) {
 	context.JSON(http.StatusOK, gin.H{"message": "Post updated successfully", "post": post})
 }
 
+// UpdateComment godoc
+//
+//	@Summary		Update a comment
+//	@Description	Update a comment
+//	@Security		ApiKeyAuth
+//	@Tags			comments
+//	@Accept			json
+//	@Produce		json
+//	@Param			commentID	path		string	true	"Comment ID"
+//	@Param			input		body		Comment	true	"Comment object"
+//	@Success		200			{object}	Response
+//	@Failure		400			{object}	Response
+//	@Failure		500			{object}	Response
+//	@Router			/api/posts/comments/{commentID} [patch]
 func (h *Handler) UpdateComment(context *gin.Context) {
 	commentID := context.Param("commentID")
 
