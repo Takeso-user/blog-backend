@@ -3,8 +3,8 @@ package pkg
 import (
 	"errors"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
-	"log"
 	"os"
 	"sync"
 	"time"
@@ -18,7 +18,7 @@ var (
 func GetJWTSecret() []byte {
 	once.Do(func() {
 		jwtSecret = []byte(os.Getenv("JWT_SECRET"))
-		log.Println("JWT secret loaded from environment")
+		logrus.Println("JWT secret loaded from environment")
 	})
 	return jwtSecret
 }
@@ -31,25 +31,25 @@ type Claims struct {
 }
 
 func HashPassword(password string) (string, error) {
-	log.Println("Hashing password")
+	logrus.Println("Hashing password")
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		log.Printf("Error hashing password: %v", err)
+		logrus.Printf("Error hashing password: %v", err)
 	}
 	return string(hashedPassword), err
 }
 
 func CheckPassword(hashedPassword, password string) error {
-	log.Println("Checking password")
+	logrus.Println("Checking password")
 	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 	if err != nil {
-		log.Printf("Password check failed: %v", err)
+		logrus.Printf("Password check failed: %v", err)
 	}
 	return err
 }
 
 func GenerateJWT(user User) (string, error) {
-	log.Println("Generating JWT for user:", user.Username)
+	logrus.Println("Generating JWT for user:", user.Username)
 	claims := &Claims{
 		Username: user.Username,
 		Role:     user.Role,
@@ -62,19 +62,19 @@ func GenerateJWT(user User) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signedToken, err := token.SignedString(GetJWTSecret())
 	if err != nil {
-		log.Printf("Error generating JWT: %v", err)
+		logrus.Printf("Error generating JWT: %v", err)
 	}
 	return signedToken, err
 }
 
 func ParseJWT(tokenStr string) (*Claims, error) {
-	log.Println("Parsing JWT")
+	logrus.Println("Parsing JWT")
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
 		return GetJWTSecret(), nil
 	})
 	if err != nil || !token.Valid {
-		log.Printf("Invalid token: %v", err)
+		logrus.Printf("Invalid token: %v", err)
 		return nil, errors.New("invalid token")
 	}
 	return claims, nil

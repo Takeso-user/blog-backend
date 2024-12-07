@@ -3,7 +3,7 @@ package config
 import (
 	"context"
 	"fmt"
-	"log"
+	"github.com/sirupsen/logrus"
 	"os"
 	"sync"
 	"time"
@@ -29,7 +29,7 @@ type Config struct {
 func LoadEnv() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Printf("Warning: .env file not found: %v", err)
+		logrus.Printf("Warning: .env file not found: %v", err)
 	}
 	mongoUser := os.Getenv("MONGO_USER")
 	mongoPass := os.Getenv("MONGO_PASSWORD")
@@ -37,7 +37,7 @@ func LoadEnv() {
 	jwtSecret = os.Getenv("JWT_SECRET")
 
 	if mongoUser == "" || mongoPass == "" || dbName == "" || jwtSecret == "" {
-		log.Fatal("MONGO_USER, MONGO_PASSWORD, MONGO_DATABASE and JWT_SECRET are required")
+		logrus.Fatal("MONGO_USER, MONGO_PASSWORD, MONGO_DATABASE and JWT_SECRET are required")
 	}
 
 	host := "localhost"
@@ -55,7 +55,7 @@ func LoadEnv() {
 
 func ConnectToMongo() (*Config, error) {
 	LoadEnv()
-	fmt.Printf("!!!Connect to monga: uri: %s\n", uri)
+	logrus.Printf("Connect to monga: uri: %s\n", uri)
 	clientOptions := options.Client().ApplyURI(uri)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -83,7 +83,7 @@ func (c *Config) CloseMongo() {
 		defer cancel()
 
 		if err := c.MongoClient.Disconnect(ctx); err != nil {
-			log.Printf("Error while disconnecting from MongoDB: %v", err)
+			logrus.Printf("Error while disconnecting from MongoDB: %v", err)
 		}
 	}
 }

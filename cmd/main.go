@@ -3,21 +3,25 @@ package main
 import (
 	"context"
 	"errors"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
+	"github.com/Takeso-user/in-mem-cache/cache"
+	"github.com/gorilla/mux"
+	"github.com/sirupsen/logrus"
+	"github.com/swaggo/http-swagger"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
 
-	"github.com/Takeso-user/in-mem-cache/cache"
-
 	"github.com/Takeso-user/blog-backend/config"
 	_ "github.com/Takeso-user/blog-backend/docs"
 	"github.com/Takeso-user/blog-backend/pkg"
-	"github.com/gin-gonic/gin"
 )
+
+func initLogger() {
+	logrus.SetFormatter(&logrus.JSONFormatter{})
+	logrus.SetLevel(logrus.DebugLevel)
+}
 
 //	@title			Blog API
 //	@version		1.0
@@ -30,63 +34,56 @@ import (
 //	@host		localhost:8080
 //	@BasePath	/
 
-//	@securityDefinitions.apikey	ApiKeyAuth
-//	@in							header
-//	@name						Authorization
-
+// @securityDefinitions.apikey	ApiKeyAuth
+// @in							header
+// @name						Authorization
 func main() {
-	log.Println("Loading environment variables...")
+	initLogger()
+	logrus.Println("Loading environment variables...")
 	config.LoadEnv()
 
-	log.Println("Connecting to MongoDB...")
+	logrus.Println("Connecting to MongoDB...")
 	cfg, err := config.ConnectToMongo()
 	if err != nil {
 		log.Fatalf("Failed to connect to MongoDB: %v", err)
 	}
 	defer func() {
-		log.Println("Closing MongoDB connection...")
+		logrus.Println("Closing MongoDB connection...")
 		cfg.CloseMongo()
 	}()
 
-	log.Println("Initializing repositories...")
+	logrus.Println("Initializing repositories...")
 	repository := pkg.NewRepository(cfg.Database)
 
-	log.Println("Initializing cache...")
+	logrus.Println("Initializing cache...")
 	cacheInstance := cache.NewCache(5 * time.Minute)
 
-	log.Println("Initializing services...")
+	logrus.Println("Initializing services...")
 	userService := pkg.NewUserService(repository.UserRepositoryInterface, cacheInstance)
 	postService := pkg.NewPostService(repository.PostRepositoryInterface, cacheInstance)
 	commentService := pkg.NewCommentService(repository.CommentRepositoryInterface, userService, cacheInstance)
 
-	log.Println("Initializing handlers...")
+	logrus.Println("Initializing handlers...")
 	handler := pkg.NewHandler(postService, commentService, userService)
 
-	log.Println("Setting up router...")
-	router := gin.Default()
-	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	{
-		router.POST("/auth/register", handler.Register)
-		router.POST("/auth/login", handler.Login)
-		router.GET("/auth/users", handler.GetUsers) //.Use(pkg.OwnerOrAdminMiddleware(postService))
-	}
-	api := router.Group("/api").Use(pkg.JWTMiddleware())
-	{
-		{
-			api.POST("/posts", handler.CreatePost)
-			api.GET("/posts", handler.GetPosts)
-			api.GET("/posts/:id", handler.GetPostById)
-			api.PATCH("/posts/:id", pkg.OwnerOrAdminMiddleware(postService), handler.UpdatePost)
-			api.DELETE("/posts/:id", pkg.OwnerOrAdminMiddleware(postService), handler.DeletePost)
-		}
-		{
-			api.POST("/posts/:id/comments", handler.AddComment)
-			api.GET("/posts/:id/comments", handler.GetComments)
-			api.GET("/posts/comments/", handler.GetAllComment)
-			api.DELETE("/posts/comments/:commentID", pkg.OwnerOrAdminMiddleware(postService), handler.DeleteComment)
-			api.PATCH("/posts/comments/:commentID", pkg.OwnerOrAdminMiddleware(postService), handler.UpdateComment)
-		}
-	}
+	logrus.Println("Setting up router...")
+	router := mux.NewRouter()
+	router.PathPrefix("/swagger").Handler(httpSwagger.WrapHandler)
+	router.HandleFunc("/auth/register", handler.Register).Methods("POST")
+	router.HandleFunc("/auth/login", handler.Login).Methods("POST")
+	router.HandleFunc("/auth/users", handler.GetUsers).Methods("GET")
+	api := router.PathPrefix("/api").Subrouter()
+	api.Use(pkg.JWTMiddleware)
+	api.HandleFunc("/posts", handler.CreatePost).Methods("POST")
+	api.HandleFunc("/posts", handler.GetPosts).Methods("GET")
+	api.HandleFunc("/posts/{id}", handler.GetPostById).Methods("GET")
+	api.Handle("/posts/{id}", pkg.OwnerOrAdminMiddleware(postService)(http.HandlerFunc(handler.UpdatePost))).Methods("PATCH")
+	api.Handle("/posts/{id}", pkg.OwnerOrAdminMiddleware(postService)(http.HandlerFunc(handler.DeletePost))).Methods("DELETE")
+	api.HandleFunc("/posts/{id}/comments", handler.AddComment).Methods("POST")
+	api.HandleFunc("/posts/{id}/comments", handler.GetComments).Methods("GET")
+	api.HandleFunc("/comments", handler.GetAllComment).Methods("GET")
+	api.Handle("/posts/comments/{commentID}", pkg.OwnerOrAdminMiddleware(postService)(http.HandlerFunc(handler.DeleteComment))).Methods("DELETE")
+	api.Handle("/posts/comments/{commentID}", pkg.OwnerOrAdminMiddleware(postService)(http.HandlerFunc(handler.UpdateComment))).Methods("PATCH")
 
 	srv := &http.Server{
 		Addr:              ":8080",
@@ -97,7 +94,7 @@ func main() {
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
-	log.Println("Starting server on :8080...")
+	logrus.Println("Starting server on :8080...")
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("Server listen error: %s\n", err)
@@ -107,7 +104,7 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
 	<-quit
-	log.Println("Received shutdown signal, shutting down server...")
+	logrus.Println("Received shutdown signal, shutting down server...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -115,5 +112,5 @@ func main() {
 		log.Fatalf("Server forced to shutdown: %v", err)
 	}
 
-	log.Println("Server exiting")
+	logrus.Println("Server exiting")
 }

@@ -1,10 +1,11 @@
 package pkg
 
 import (
+	"encoding/json"
 	_ "github.com/Takeso-user/blog-backend/docs"
-	"github.com/gin-gonic/gin"
+	"github.com/gorilla/mux"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"log"
 	"net/http"
 )
 
@@ -24,6 +25,10 @@ func NewHandler(postService *PostService, commentService *CommentService, userSe
 
 type Response map[string]interface{}
 
+func (h *Handler) SwaggerHandler(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "path/to/swagger/index.html")
+}
+
 // Register godoc
 //
 //	@Summary		Register a new user
@@ -36,16 +41,16 @@ type Response map[string]interface{}
 //	@Failure		400		{object}	Response
 //	@Failure		500		{object}	Response
 //	@Router			/auth/register [post]
-func (h *Handler) Register(c *gin.Context) {
+func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var input User
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	hashedPassword, err := HashPassword(input.Password)
 	if err != nil {
-		log.Printf("Failed to hash password: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+		logrus.Printf("Failed to hash password: %v", err)
+		http.Error(w, "Failed to hash password", http.StatusInternalServerError)
 		return
 	}
 	input.Password = hashedPassword
@@ -54,13 +59,17 @@ func (h *Handler) Register(c *gin.Context) {
 	}
 
 	if err := h.UserService.CreateUser(input); err != nil {
-		log.Printf("Failed to register user: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register user"})
+		logrus.Printf("Failed to register user: %v", err)
+		http.Error(w, "Failed to register user", http.StatusInternalServerError)
 		return
 	}
 
-	log.Println("User registered successfully")
-	c.JSON(http.StatusOK, gin.H{"message": "User registered successfully"})
+	logrus.Println("User registered successfully")
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(Response{"message": "User registered successfully"})
+	if err != nil {
+		return
+	}
 }
 
 // Login godoc
@@ -77,37 +86,41 @@ func (h *Handler) Register(c *gin.Context) {
 //	@Failure		401		{object}	Response
 //	@Failure		500		{object}	Response
 //	@Router			/auth/login [post]
-func (h *Handler) Login(c *gin.Context) {
+func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var input User
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	user, err := h.UserService.GetUserByUsername(input.Username)
-	log.Printf("Getting user: %v", user)
+	logrus.Printf("Getting user: %v", user)
 	if err != nil {
-		log.Printf("Invalid username or password: %v", err)
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid username or password"})
+		logrus.Printf("Invalid username or password: %v", err)
+		http.Error(w, "Invalid username or password", http.StatusUnauthorized)
 		return
 	}
 
 	err = CheckPassword(user.Password, input.Password)
 	if err != nil {
-		log.Printf("Failed to check password: %v", err)
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid username or password"})
+		logrus.Printf("Failed to check password: %v", err)
+		http.Error(w, "Invalid username or password", http.StatusUnauthorized)
 		return
 	}
 
 	token, err := GenerateJWT(user)
 	if err != nil {
-		log.Printf("Failed to generate token: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		logrus.Printf("Failed to generate token: %v", err)
+		http.Error(w, "Failed to generate token", http.StatusInternalServerError)
 		return
 	}
 
-	log.Println("User logged in successfully")
-	c.JSON(http.StatusOK, gin.H{"token": token})
+	logrus.Println("User logged in successfully")
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(Response{"token": token})
+	if err != nil {
+		return
+	}
 }
 
 // CreatePost godoc
@@ -126,22 +139,26 @@ func (h *Handler) Login(c *gin.Context) {
 //	@Failure		400		{object}	Response
 //	@Failure		500		{object}	Response
 //	@Router			/api/posts [post]
-func (h *Handler) CreatePost(c *gin.Context) {
+func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	var input Post
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	err := h.PostService.CreatePost(input.Title, input.Content, input.AuthorID)
 	if err != nil {
-		log.Printf("Unable to create post: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to create post"})
+		logrus.Printf("Unable to create post: %v", err)
+		http.Error(w, "Unable to create post", http.StatusInternalServerError)
 		return
 	}
 
-	log.Println("Post created successfully")
-	c.JSON(http.StatusOK, gin.H{"message": "Post created successfully"})
+	logrus.Println("Post created successfully")
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(Response{"message": "Post created successfully"})
+	if err != nil {
+		return
+	}
 }
 
 // GetPosts godoc
@@ -157,15 +174,19 @@ func (h *Handler) CreatePost(c *gin.Context) {
 //	@Success		200	{array}		Post
 //	@Failure		500	{object}	Response
 //	@Router			/api/posts [get]
-func (h *Handler) GetPosts(c *gin.Context) {
+func (h *Handler) GetPosts(w http.ResponseWriter, r *http.Request) {
 	posts, err := h.PostService.GetPosts()
 	if err != nil {
-		log.Printf("Unable to fetch posts: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to fetch posts"})
+		logrus.Printf("Unable to fetch posts: %v", err)
+		http.Error(w, "Unable to fetch posts", http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusOK, posts)
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(posts)
+	if err != nil {
+		return
+	}
 }
 
 // AddComment godoc
@@ -185,34 +206,39 @@ func (h *Handler) GetPosts(c *gin.Context) {
 //	@Failure		400		{object}	Response
 //	@Failure		500		{object}	Response
 //	@Router			/api/posts/{id}/comments [post]
-func (h *Handler) AddComment(c *gin.Context) {
-	postID := c.Param("id")
+
+func (h *Handler) AddComment(w http.ResponseWriter, r *http.Request) {
+	postID := mux.Vars(r)["id"]
 
 	var input struct {
 		UserID  string `json:"user_id"`
 		Content string `json:"content"`
 	}
 
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	userID, err := primitive.ObjectIDFromHex(input.UserID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
 		return
 	}
 
 	err = h.CommentService.AddComment(postID, userID.Hex(), input.Content)
 	if err != nil {
-		log.Printf("Unable to add comment: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to add comment"})
+		logrus.Printf("Unable to add comment: %v", err)
+		http.Error(w, "Unable to add comment", http.StatusInternalServerError)
 		return
 	}
 
-	log.Println("Comment added successfully")
-	c.JSON(http.StatusOK, gin.H{"message": "Comment added successfully"})
+	logrus.Println("Comment added successfully")
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(Response{"message": "Comment added successfully"})
+	if err != nil {
+		return
+	}
 }
 
 // GetComments godoc
@@ -229,16 +255,20 @@ func (h *Handler) AddComment(c *gin.Context) {
 //	@Success		200	{array}		Comment
 //	@Failure		500	{object}	Response
 //	@Router			/api/posts/{id}/comments [get]
-func (h *Handler) GetComments(c *gin.Context) {
-	postID := c.Param("id")
+func (h *Handler) GetComments(w http.ResponseWriter, r *http.Request) {
+	postID := mux.Vars(r)["id"]
 	comments, err := h.CommentService.GetComments(postID)
 	if err != nil {
-		log.Printf("Unable to fetch comments: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to fetch comments"})
+		logrus.Printf("Unable to fetch comments: %v", err)
+		http.Error(w, "Unable to fetch comments", http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusOK, comments)
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(comments)
+	if err != nil {
+		return
+	}
 }
 
 // GetUsers godoc
@@ -254,15 +284,19 @@ func (h *Handler) GetComments(c *gin.Context) {
 //	@Success		200	{array}		User
 //	@Failure		500	{object}	Response
 //	@Router			/auth/users [get]
-func (h *Handler) GetUsers(context *gin.Context) {
+func (h *Handler) GetUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := h.UserService.GetUsers()
 	if err != nil {
-		log.Printf("Unable to fetch users: %v", err)
-		context.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to fetch users"})
+		logrus.Printf("Unable to fetch users: %v", err)
+		http.Error(w, "Unable to fetch users", http.StatusInternalServerError)
 		return
 	}
 
-	context.JSON(http.StatusOK, users)
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(users)
+	if err != nil {
+		return
+	}
 }
 
 // GetPostById godoc
@@ -276,15 +310,28 @@ func (h *Handler) GetUsers(context *gin.Context) {
 //	@Success		200	{object}	Post
 //	@Failure		500	{object}	Response
 //	@Router			/api/posts/{id} [get]
-func (h *Handler) GetPostById(context *gin.Context) {
-	postID := context.Param("id")
-	post, err := h.PostService.GetPostById(postID)
+func (h *Handler) GetPostById(w http.ResponseWriter, r *http.Request) {
+	postID := mux.Vars(r)["id"]
+	logrus.Printf("!!!Getting post by ID: %s", postID)
+	objectID, err := primitive.ObjectIDFromHex(postID)
+	logrus.Printf("!!!Getting post by ID: %v", objectID)
 	if err != nil {
-		log.Printf("Unable to fetch post: %v", err)
-		context.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to fetch post"})
+		logrus.Printf("Error converting postID to ObjectID: %v", err)
+		http.Error(w, "Invalid post ID", http.StatusBadRequest)
 		return
 	}
-	context.JSON(http.StatusOK, post)
+
+	post, err := h.PostService.GetPostById(objectID.Hex())
+	if err != nil {
+		logrus.Printf("Error getting post by ID: %v", err)
+		http.Error(w, "Unable to fetch post", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(post)
+	if err != nil {
+		return
+	}
 }
 
 // DeletePost godoc
@@ -298,16 +345,21 @@ func (h *Handler) GetPostById(context *gin.Context) {
 //	@Success		200	{object}	Post
 //	@Failure		500	{object}	Response
 //	@Router			/api/posts/{id} [delete]
-func (h *Handler) DeletePost(context *gin.Context) {
-	postID := context.Param("id")
+func (h *Handler) DeletePost(w http.ResponseWriter, r *http.Request) {
+	postID := mux.Vars(r)["id"]
+
 	err := h.PostService.DeletePost(postID)
 	if err != nil {
-		log.Printf("Unable to delete post: %v", err)
-		context.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to delete post"})
+		logrus.Printf("Unable to delete post: %v", err)
+		http.Error(w, "Unable to delete post", http.StatusInternalServerError)
 		return
 	}
-	log.Println("Post deleted successfully")
-	context.JSON(http.StatusOK, gin.H{"message": "Post deleted successfully"})
+	logrus.Println("Post deleted successfully")
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(Response{"message": "Post deleted successfully"})
+	if err != nil {
+		return
+	}
 }
 
 // GetAllComment godoc
@@ -320,14 +372,19 @@ func (h *Handler) DeletePost(context *gin.Context) {
 //	@Success		200	{array}		Comment
 //	@Failure		500	{object}	Response
 //	@Router			/api/posts/comments [get]
-func (h *Handler) GetAllComment(context *gin.Context) {
+func (h *Handler) GetAllComment(w http.ResponseWriter, r *http.Request) {
+	r = nil
 	comments, err := h.CommentService.GetAllComment()
 	if err != nil {
-		log.Printf("Unable to fetch comments: %v", err)
-		context.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to fetch comments"})
+		logrus.Printf("Unable to fetch comments: %v", err)
+		http.Error(w, "Unable to fetch comments", http.StatusInternalServerError)
 		return
 	}
-	context.JSON(http.StatusOK, comments)
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(comments)
+	if err != nil {
+		return
+	}
 }
 
 // DeleteComment godoc
@@ -340,16 +397,21 @@ func (h *Handler) GetAllComment(context *gin.Context) {
 //	@Success		200			{object}	Response
 //	@Failure		500			{object}	Response
 //	@Router			/api/posts/comments/{commentID} [delete]
-func (h *Handler) DeleteComment(context *gin.Context) {
-	commentID := context.Param("commentID")
+func (h *Handler) DeleteComment(w http.ResponseWriter, r *http.Request) {
+	commentID := mux.Vars(r)["commentID"]
+
 	err := h.CommentService.DeleteComment(commentID)
 	if err != nil {
-		log.Printf("Unable to delete comment: %v", err)
-		context.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to delete comment"})
+		logrus.Printf("Unable to delete comment: %v", err)
+		http.Error(w, "Unable to delete comment", http.StatusInternalServerError)
 		return
 	}
-	log.Println("Comment deleted successfully")
-	context.JSON(http.StatusOK, gin.H{"message": "Comment deleted successfully"})
+	logrus.Println("Comment deleted successfully")
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(Response{"message": "Comment deleted successfully"})
+	if err != nil {
+		return
+	}
 }
 
 // UpdatePost godoc
@@ -366,31 +428,33 @@ func (h *Handler) DeleteComment(context *gin.Context) {
 //	@Failure		400		{object}	Response
 //	@Failure		500		{object}	Response
 //	@Router			/api/posts/{id} [patch]
-func (h *Handler) UpdatePost(context *gin.Context) {
-	postID := context.Param("id")
+
+func (h *Handler) UpdatePost(w http.ResponseWriter, r *http.Request) {
+	postID := mux.Vars(r)["id"]
 
 	var input Post
-	if err := context.ShouldBindJSON(&input); err != nil {
-		context.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	objectID, err := primitive.ObjectIDFromHex(postID)
 	if err != nil {
-		context.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
+		http.Error(w, "Invalid post ID", http.StatusBadRequest)
 		return
 	}
 
 	post, err := h.PostService.UpdatePost(objectID, input)
 	if err != nil {
-		log.Printf("Unable to update post: %v", err)
-		context.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Unable to update post",
-			"err":   err.Error(),
-		})
+		logrus.Printf("Unable to update post: %v", err)
+		http.Error(w, "Unable to update post", http.StatusInternalServerError)
 		return
 	}
-	log.Println("Post updated successfully")
-	context.JSON(http.StatusOK, gin.H{"message": "Post updated successfully", "post": post})
+	logrus.Println("Post updated successfully")
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(Response{"message": "Post updated successfully", "post": post})
+	if err != nil {
+		return
+	}
 }
 
 // UpdateComment godoc
@@ -407,29 +471,31 @@ func (h *Handler) UpdatePost(context *gin.Context) {
 //	@Failure		400			{object}	Response
 //	@Failure		500			{object}	Response
 //	@Router			/api/posts/comments/{commentID} [patch]
-func (h *Handler) UpdateComment(context *gin.Context) {
-	commentID := context.Param("commentID")
+
+func (h *Handler) UpdateComment(w http.ResponseWriter, r *http.Request) {
+	commentID := mux.Vars(r)["commentID"]
 
 	var input Comment
-	if err := context.ShouldBindJSON(&input); err != nil {
-		context.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	objectID, err := primitive.ObjectIDFromHex(commentID)
 	if err != nil {
-		context.JSON(http.StatusBadRequest, gin.H{"error": "Invalid comment ID"})
+		http.Error(w, "Invalid comment ID", http.StatusBadRequest)
 		return
 	}
 
 	comment, err := h.CommentService.UpdateComment(objectID, input)
 	if err != nil {
-		log.Printf("Unable to update comment: %v", err)
-		context.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Unable to update comment",
-			"err":   err.Error(),
-		})
+		logrus.Printf("Unable to update comment: %v", err)
+		http.Error(w, "Unable to update comment", http.StatusInternalServerError)
 		return
 	}
-	log.Println("Comment updated successfully")
-	context.JSON(http.StatusOK, gin.H{"message": "Comment updated successfully", "comment": comment})
+	logrus.Println("Comment updated successfully")
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(Response{"message": "Comment updated successfully", "comment": comment})
+	if err != nil {
+		return
+	}
 }

@@ -29,11 +29,7 @@ definitions:
         type: string
     type: object
   pkg.Response:
-    properties:
-      error:
-        type: string
-      message:
-        type: string
+    additionalProperties: true
     type: object
   pkg.User:
     properties:
@@ -157,42 +153,6 @@ paths:
       summary: Get a post by ID
       tags:
       - posts
-    patch:
-      consumes:
-      - application/json
-      description: Update a post
-      parameters:
-      - description: Post ID
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Post object
-        in: body
-        name: input
-        required: true
-        schema:
-          $ref: '#/definitions/pkg.Post'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/pkg.Response'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/pkg.Response'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/pkg.Response'
-      security:
-      - ApiKeyAuth: []
-      summary: Update a post
-      tags:
-      - posts
   /api/posts/{id}/comments:
     get:
       description: Get comments for a post
@@ -218,42 +178,6 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Get comments for a post
-      tags:
-      - comments
-    post:
-      consumes:
-      - application/json
-      description: Add a comment to a post
-      parameters:
-      - description: Post ID
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Comment object
-        in: body
-        name: input
-        required: true
-        schema:
-          $ref: '#/definitions/pkg.Comment'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/pkg.Response'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/pkg.Response'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/pkg.Response'
-      security:
-      - ApiKeyAuth: []
-      summary: Add a comment to a post
       tags:
       - comments
   /api/posts/comments:
@@ -298,42 +222,6 @@ paths:
           schema:
             $ref: '#/definitions/pkg.Response'
       summary: Delete a comment
-      tags:
-      - comments
-    patch:
-      consumes:
-      - application/json
-      description: Update a comment
-      parameters:
-      - description: Comment ID
-        in: path
-        name: commentID
-        required: true
-        type: string
-      - description: Comment object
-        in: body
-        name: input
-        required: true
-        schema:
-          $ref: '#/definitions/pkg.Comment'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/pkg.Response'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/pkg.Response'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/pkg.Response'
-      security:
-      - ApiKeyAuth: []
-      summary: Update a comment
       tags:
       - comments
   /auth/login:
